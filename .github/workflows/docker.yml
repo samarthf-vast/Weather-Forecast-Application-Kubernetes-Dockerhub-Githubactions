@@ -25,16 +25,16 @@ jobs:
 
       # Build images.....................................
       - name: Build backend image
-        run: docker build -t samarthf45/backend ./backend
+        run: docker build -t samarthfunde45/backend ./backend
 
       - name: Build frontend image
-        run: docker build -t samarthf45/frontend ./frontend
+        run: docker build -t samarthfunde45/frontend ./frontend
 
       # Push images on the dockerhub.....................
       - name: Push backend image
-        run: docker push samarthf45/backend
+        run: docker push samarthfunde45/backend
 
       - name: Push frontend image
-        run: docker push samarthf45/frontend
+        run: docker push samarthfunde45/frontend
 
       
