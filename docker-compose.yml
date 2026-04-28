@@ -20,7 +20,8 @@ services:
       - "3000:3000"
     depends_on:
       - backend
-
+      
+## i used following mongo container for locally testing but not need to build images using docker + github actions
   # mongo:
   #   image: mongo
   #   container_name: mongo
