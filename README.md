@@ -168,7 +168,7 @@ Images are pushed to Docker Hub:
 ---
 
 
-##  my Key Learnings
+##  My Key Learnings
 
 * Docker containerization of MERN apps
 * Multi-container orchestration using Docker Compose
