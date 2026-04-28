@@ -7,10 +7,10 @@ services:
     restart: always
     ports:
       - "5000:5000"
-    depends_on:
-      - mongo
-    environment:
-      - MONGO_URI=${MONGO_URI}
+    # depends_on:
+    #   - mongo
+    # environment:
+    #   - MONGO_URI=${MONGO_URI}
 
   frontend:
     build: ./frontend
@@ -21,9 +21,9 @@ services:
     depends_on:
       - backend
 
-  mongo:
-    image: mongo
-    container_name: mongo
-    restart: always
-    ports:
-      - "27017:27017"
+  # mongo:
+  #   image: mongo
+  #   container_name: mongo
+  #   restart: always
+  #   ports:
+  #     - "27017:27017"
