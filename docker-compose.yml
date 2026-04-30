@@ -30,7 +30,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS}
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.29.8-alpine
     ports:
       - "80:80"
     volumes:
