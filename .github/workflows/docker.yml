@@ -29,13 +29,15 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: samarthfunde45/backend:latest
+          tags: |
+            samarthfunde45/backend:${{ github.run_number }}
+            
 
       - name: Build & push frontend
         uses: docker/build-push-action@v7.1.0
         with:
           context: ./frontend
           push: true
-          tags: samarthfunde45/frontend:latest
-
-      
+          tags: |
+            samarthfunde45/frontend:${{ github.run_number }}
+            
