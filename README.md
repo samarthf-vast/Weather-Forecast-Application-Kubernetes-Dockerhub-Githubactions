@@ -1,24 +1,12 @@
-# Weather Forecast App (MERN + Docker + GitHub Actions)
+# Weather Forecast App — MERN + Docker + GitHub Actions
 
-This project is a **full-stack MERN application** containerized using Docker and integrated with a CI pipeline using GitHub Actions.
-
----
-
-##  Project Overview
-
-This project demonstrates:
-
-* Building a MERN stack app (MongoDB, Express, React, Node.js)
-* Containerizing frontend and backend using Docker
-* Managing multi-container setup using Docker Compose
-* Automating build & push using GitHub Actions
-* Publishing Docker images to Docker Hub
+Full-stack MERN application containerized using Docker with CI/CD via GitHub Actions.
 
 ---
 
-## Step-by-Step Implementation 
+## Step 1 — Clone the Repository
 
-## 1️Clone the Repository
+**Task:** Get the source code locally.
 
 ```bash
 git clone https://github.com/samarthfunde/Weather-Forecast-Application---MERN-Stack-with-Docker.git
@@ -27,155 +15,169 @@ cd Weather-Forecast-App
 
 ---
 
-## 2️Run Application Locally (Without Docker)
+## Step 2 — Run Locally Without Docker
 
-### Backend
+**Task:** Verify the app works before containerization.
 
+**Backend:**
 ```bash
 cd backend
 npm install
 npm start
 ```
 
-### Frontend
-
+**Frontend:**
 ```bash
 cd frontend
 npm install
 npm start
 ```
 
-his verifies that the app works before containerization.
+---
+
+## Step 3 — Dockerize Frontend and Backend
+
+**Task:** Create Dockerfiles for each service.
+
+- `/backend/Dockerfile` — Uses Node.js base image, installs dependencies, starts server.
+- `/frontend/Dockerfile` — Builds and runs the React app inside a container.
 
 ---
 
-## 3️ Dockerization
+## Step 4 — Set Up Docker Compose
 
-###  Backend Dockerfile
+**Task:** Orchestrate all services with a single command.
 
-* Created inside `/backend`
-* Uses Node.js base image
-* Installs dependencies and starts server...
+File: `docker-compose.yml` (root directory)
 
-###  Frontend Dockerfile
+Services defined:
+- `frontend`
+- `backend`
+- `mongo`
 
-* Created inside `/frontend`
-* Runs React app inside container
+```bash
+docker-compose up --build
+```
 
----
-
-## 4️Docker Compose Setup
-
-Created `docker-compose.yml` in root directory:
-
-* Runs **3 services**:
-
-  * frontend
-  * backend
-  * mongo
-
-### Why Docker Compose i Used?
-
-* Manages multiple containers
-* Enables communication between services
-* Simplifies startup with one command
+Access:
+- Frontend → http://localhost:3000
+- Backend  → http://localhost:5000
 
 ---
 
-## 5️ Environment Configuration
+## Step 5 — Configure Environment Variables
 
-Created `.env` file in root:
+**Task:** Avoid hardcoding credentials and isolate config per environment.
+
+Create a `.env` file:
 
 ```env
-MONGO_URI=mongodb://mongo:27017/weather
+MONGO_USER=dev_user
+MONGO_PASS=dev123
+MONGO_PORT=27017
+MONGO_DB=weather_dev
+MONGO_AUTH_DB=weather_dev
 ```
 
-### Why?
-
-* Backend connects to MongoDB using this variable
-* Avoids hardcoding database connection
-
 ---
 
-## 6️ Run Full App with Docker in Locally (Vs Code)
+## Step 6 — Set Up CI/CD with GitHub Actions
 
-```bash
-docker-compose up --build 
-```
+**Task:** Automate build and push of Docker images on every push.
 
-This will:
+File: `.github/workflows/docker.yml`
 
-* Build images
-* Create containers
-* Start frontend, backend, and MongoDB
-
----
-
-##  Access Application
-
-After running containers:
-
-* Frontend → http://localhost:3000
-* Backend → http://localhost:5000
-
----
-
-## 7 CI/CD Pipeline (GitHub Actions).... also i have taken some Reference from Documentation
-
-Workflow file:
-
-```bash
-.github/workflows/docker.yml
-
-```
----
-
-## 8 Git Commands Used
-1. git init
-2. git add .
-3. git commit -m "Initial commit"
-4. git remote add origin https://github.com/samarthf-vast/github_actions_project.git
-5. git push -u origin master
-
----
-
-##  Pipeline Steps
-
+Pipeline steps:
 1. Checkout code
 2. Setup Docker Buildx
 3. Login to Docker Hub
 4. Build Docker images
 5. Push images to Docker Hub
 
----
+GitHub Secrets required:
+- `DOCKER_USERNAME`
+- `DOCKER_PASSWORD`
 
-##  GitHub Secrets Used
-
-* `DOCKER_USERNAME`
-* `DOCKER_PASSWORD`
-* `MONGO_URI` (optional)
 
 ---
 
+## Step 7 — Docker Image Versioning
 
-##  Docker Hub Images
+**Task:** Tag images with build number and latest for easy rollback.
 
-Images are pushed to Docker Hub:
+Images pushed to Docker Hub:
 
-* `docker push samarthfunde45/backend`
-* `docker push samarthfunde45/frontend`
+```
+samarthfunde45/backend:<run_number>
 
----
-
-
-##  My Key Learnings
-
-* Docker containerization of MERN apps
-* Multi-container orchestration using Docker Compose
-* CI/CD pipeline with GitHub Actions
-* Secure secrets handling
-* Difference between build vs runtime environments
+samarthfunde45/frontend:<run_number>
+```
 
 ---
 
+## Step 8 — Configure Local DNS
 
+**Task:** Set up a production-like custom domain for local development.
+
+Edit `/etc/hosts`:
+
+```
+127.0.0.1   weatherapp.com
+```
+
+Access app at: http://weatherapp.com
+
+---
+
+## Step 9 — Add Nginx Reverse Proxy
+
+**Task:** Route traffic through port 80 using Nginx.
+
+Add to `docker-compose.yml`:
+
+```yaml
+nginx:
+  image: nginx:latest
+  ports:
+    - "80:80"
+  volumes:
+    - ./nginx.conf:/etc/nginx/conf.d/default.conf
+  depends_on:
+    - frontend
+```
+
+---
+
+## Step 10 — Secure Database Authentication
+
+**Task:** Isolate database access per environment with dedicated users.
+
+Databases:
+- `weather_dev`
+- `weather_test`
+- `weather_prod`
+
+Users and access:
+
+| User       | weather_dev | weather_test | weather_prod |
+|------------|-------------|--------------|--------------|
+| dev_user   | Yes         | No           | No           |
+| test_user  | No          | Yes          | No           |
+| prod_user  | No          | No           | Yes          |
+
+Unauthorized access test:
+```js
+use weather_prod
+db.users.find()
+// MongoServerError: not authorized
+```
+
+---
+
+## Author
+
+Samarth Funde  
+Associate DevOps Engineer — ValueAdd Softtech & Systems Pvt. Ltd.  
+Email: samarthf@valueaddsofttech.com  
+Phone: +91-9604156915  
+LinkedIn: https://in.linkedin.com/in/samarth-funde-084425277
