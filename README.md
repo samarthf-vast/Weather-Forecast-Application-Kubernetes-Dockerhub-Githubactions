@@ -6,8 +6,6 @@ This project implements a complete monitoring and logging solution for a Dockeri
 
 The goal of this project is to monitor:
 
-<img width="1366" height="768" alt="Screenshot from 2026-05-07 13-26-50" src="https://github.com/user-attachments/assets/5fc73693-c99d-44dd-b2b7-c7e46967e83c" />
-
 * Container CPU usage
 * Container Memory usage
 * Host system metrics
@@ -86,6 +84,8 @@ Used PromQL queries for:
 * Available CPU
 * Container-wise metrics
 
+  <img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/60900d04-79e0-4916-aeee-8ee8dd9daf37" />
+
 ---
 
 # 2. Node Exporter Dashboard
@@ -102,6 +102,9 @@ Monitored:
 * System uptime
 
 Used official Grafana Node Exporter dashboard.
+
+<img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/0f9f0aef-9f73-4622-af1a-a1bc1ac24faa" />
+
 
 ---
 
@@ -122,6 +125,9 @@ Used labels:
 * `container_name`
 * `container_name_clean`
 * `job="docker"`
+
+ <img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/1bf1044f-caad-4a02-b0f1-58833e2636df" />
+
 
 ---
 
