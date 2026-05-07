@@ -157,6 +157,15 @@ Implemented:
 * User invitation system
 * Organization access management
 
+  <img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/4e1c18fd-f3e5-4bc3-ac6e-03b961d0d9d1" />
+  
+  <img width="1286" height="349" alt="image" src="https://github.com/user-attachments/assets/71bd36ee-9107-464c-b721-9dbdec883f33" />
+
+  <img width="1286" height="364" alt="image" src="https://github.com/user-attachments/assets/a787ec1d-6e91-458b-bce6-b1c5f2944269" />
+
+  <img width="1286" height="491" alt="image" src="https://github.com/user-attachments/assets/2347a2e1-6085-4651-affc-e74c29c1bcc5" />
+
+
 ---
 
 # 6. Docker Resource Limits
@@ -186,6 +195,9 @@ Used:
 label_values(container_memory_usage_bytes, container_label_com_docker_compose_service)
 ```
 
+<img width="1010" height="314" alt="image" src="https://github.com/user-attachments/assets/c77a7a78-93e2-419c-8a4c-9ef8c623122a" />
+
+
 ---
 
 # 8. CPU Monitoring Queries
@@ -202,6 +214,10 @@ Used PromQL queries with:
 * `rate()`
 * `sum()`
 * `count()`
+  
+* Container Wise CPU usage: sum(rate(container_cpu_usage_seconds_total{
+                                      container_label_com_docker_compose_service=~"$container"
+                                     }[1m])) * 100
 
 ---
 
@@ -216,6 +232,12 @@ Used:
 
 * `container_memory_usage_bytes`
 * `container_spec_memory_limit_bytes`
+
+* Container Wise Memory Usage: (
+                                container_memory_working_set_bytes{container_label_com_docker_compose_service=~"$container"}
+                                /
+                                container_spec_memory_limit_bytes{container_label_com_docker_compose_service=~"$container"}
+                                ) * 100
 
 ---
 
