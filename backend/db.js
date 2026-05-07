@@ -17,10 +17,8 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
-// 🔥 Load env based on NODE_ENV
-dotenv.config({
-  path: `.env.${process.env.NODE_ENV || "development"}`
-});
+// Load env based on NODE_ENV
+dotenv.config();
 
 const connectDB = async () => {
   try {
