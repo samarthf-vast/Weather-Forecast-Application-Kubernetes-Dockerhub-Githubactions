@@ -221,9 +221,9 @@ Used PromQL queries with:
 * `sum()`
 * `count()`
   
-* Container Wise CPU usage: sum(rate(container_cpu_usage_seconds_total{
+* Container Wise CPU usage: `sum(rate(container_cpu_usage_seconds_total{
                                       container_label_com_docker_compose_service=~"$container"
-                                     }[1m])) * 100
+                                     }[1m])) * 100`
 
 ---
 
@@ -239,11 +239,11 @@ Used:
 * `container_memory_usage_bytes`
 * `container_spec_memory_limit_bytes`
 
-* Container Wise Memory Usage: (
+* Container Wise Memory Usage: `(
                                 container_memory_working_set_bytes{container_label_com_docker_compose_service=~"$container"}
                                 /
                                 container_spec_memory_limit_bytes{container_label_com_docker_compose_service=~"$container"}
-                                ) * 100
+                                ) * 100`
 
 ---
 
