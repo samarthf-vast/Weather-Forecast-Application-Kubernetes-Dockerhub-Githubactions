@@ -6,6 +6,8 @@ This project implements a complete monitoring and logging solution for a Dockeri
 
 The goal of this project is to monitor:
 
+<img width="1366" height="768" alt="Screenshot from 2026-05-07 13-26-50" src="https://github.com/user-attachments/assets/5fc73693-c99d-44dd-b2b7-c7e46967e83c" />
+
 * Container CPU usage
 * Container Memory usage
 * Host system metrics
