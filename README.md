@@ -1,4 +1,4 @@
-# Weather Forecast Application Grafana Monitoring
+# Weather Forecast Application Grafana Monitoring Task
 
 ## Project Overview
 
