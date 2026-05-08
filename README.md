@@ -53,6 +53,7 @@ Docker Logs
        Loki
         ↓
      Grafana
+
 ```
 
 ---
