@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: 'My Dashboard'
+    folder: 'Monitoring'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+
+    options:
+      path: /var/lib/grafana/dashboards
