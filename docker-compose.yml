@@ -64,27 +64,35 @@ services:
     container_name: grafana
     ports:
       - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
 
-    # SMTP SETTINGS
-      - GF_SMTP_ENABLED=true
-      - GF_SMTP_HOST=smtp.gmail.com:587
-      - GF_SMTP_USER=samarthf@valueaddsofttech.com
-      - GF_SMTP_PASSWORD=ndezekpacdyizfkm
-      - GF_SMTP_FROM_ADDRESS=samarthf@valueaddsofttech.com
-      - GF_SERVER_ROOT_URL=http://grafana.weatherapp.com:3001
-      - GF_SERVER_DOMAIN=grafana.weatherapp.com
-      - GF_SMTP_FROM_NAME=Grafana
-      - GF_SMTP_SKIP_VERIFY=true
+    env_file:
+      - .env
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+
+      # SMTP SETTINGS
+      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED}
+      - GF_SMTP_HOST=${GF_SMTP_HOST}
+      - GF_SMTP_USER=${GF_SMTP_USER}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL}
+      - GF_SERVER_DOMAIN=${GF_SERVER_DOMAIN}
+      - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
+      - GF_SMTP_SKIP_VERIFY=${GF_SMTP_SKIP_VERIFY}
+
     restart: always
     mem_limit: 512m
+
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+    # provisioning yaml
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    # dashboard json
       - ./grafana/dashboards:/var/lib/grafana/dashboards
+     
 
 
   node-exporter:
