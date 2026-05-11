@@ -371,10 +371,41 @@ Configured datasource URLs using environment variables.
 
 # Environment Variable Configuration
 
-Configured Grafana SMTP and datasource variables inside:
+Configured application, MongoDB, Grafana SMTP, and datasource variables using:
 
 ```plaintext
 .env
+```
+
+## Required Environment Variables
+
+```env
+# MongoDB
+MONGO_USER=
+MONGO_PASS=
+MONGO_HOST=
+MONGO_PORT=
+MONGO_DB=
+MONGO_AUTH_DB=
+
+# Grafana Admin
+GRAFANA_ADMIN_USER=
+GRAFANA_ADMIN_PASSWORD=
+
+# Grafana SMTP
+GF_SMTP_ENABLED=
+GF_SMTP_HOST=
+GF_SMTP_USER=
+GF_SMTP_PASSWORD=
+GF_SMTP_FROM_ADDRESS=
+GF_SERVER_ROOT_URL=
+GF_SERVER_DOMAIN=
+GF_SMTP_FROM_NAME=
+GF_SMTP_SKIP_VERIFY=
+
+# Grafana Datasources
+PROMETHEUS_URL=
+LOKI_URL=
 ```
 ---
 
