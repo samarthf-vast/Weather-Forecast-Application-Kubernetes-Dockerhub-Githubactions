@@ -265,81 +265,488 @@ Integrated services:
 
 ---
 
-# Current Automation Status
 
-## Already Automated
+# 11. Grafana Provisioning and Dashboard Backup Automation
 
-* Dockerized infrastructure
-* Monitoring stack deployment
-* Metrics collection
-* Log collection
-* SMTP configuration
-* Multi-container monitoring
+Implemented Grafana provisioning for:
 
----
-
-# Future Improvements
-
-## 1. Grafana Provisioning Automation
-
-Planned implementation:
-
-* Automatic datasource provisioning
-* Automatic dashboard provisioning
-* Dashboard restoration after volume deletion
+* Automatic datasource creation
+* Automatic dashboard restoration
+* Automatic alert provisioning
+* Persistent monitoring configuration
+* Dashboard backup using Grafana HTTP API
 * Infrastructure-as-Code approach
 
+This implementation ensures that after deleting Grafana volumes and restarting containers, all dashboards, datasources, and alerts are recreated automatically.
+
 ---
 
-## 2. Alerting System
+# Provisioning Folder Structure
 
-Planned implementation:
+```plaintext
+grafana/
+├── dashboards/
+│   ├── container-monitoring.json
+│   ├── logs-dashboard.json
+│   └── node-exporter.json
+│
+└── provisioning/
+    ├── dashboards/
+    │   └── dashboard.yml
+    │
+    ├── datasources/
+    │   └── datasource.yml
+    │
+    └── alerting/
+        ├── alert-rules.yaml
+        └── contact-points.yaml
+```
+
+---
+
+# Dashboard Provisioning Configuration
+
+Created:
+
+```yaml
+grafana/provisioning/dashboards/dashboard.yml
+```
+
+```yaml
+apiVersion: 1
+
+providers:
+  - name: Infrastructure
+    orgId: 1
+    folder: Infrastructure
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 10
+
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+```
+
+This configuration automatically loads all dashboard JSON files from:
+
+```plaintext
+/etc/grafana/provisioning/dashboards/json
+```
+
+inside the Grafana container.
+
+---
+
+# Datasource Provisioning
+
+Created:
+
+```yaml
+grafana/provisioning/datasources/datasource.yml
+```
+
+```yaml
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: ${PROMETHEUS_URL}
+    isDefault: true
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: ${LOKI_URL}
+```
+
+Configured datasource URLs using environment variables.
+
+---
+
+# Environment Variable Configuration
+
+Configured Grafana SMTP and datasource variables inside:
+
+```plaintext
+.env
+```
+---
+
+# Docker Compose Configuration for Grafana
+
+Configured Grafana volumes and provisioning mount points:
+
+```yaml
+grafana:
+  image: grafana/grafana
+  container_name: grafana
+
+  ports:
+    - "3001:3000"
+
+  env_file:
+    - .env
+
+  environment:
+    - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+
+    # SMTP SETTINGS
+    - GF_SMTP_ENABLED=${GF_SMTP_ENABLED}
+    - GF_SMTP_HOST=${GF_SMTP_HOST}
+    - GF_SMTP_USER=${GF_SMTP_USER}
+    - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
+    - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
+    - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL}
+    - GF_SERVER_DOMAIN=${GF_SERVER_DOMAIN}
+    - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
+    - GF_SMTP_SKIP_VERIFY=${GF_SMTP_SKIP_VERIFY}
+
+  restart: always
+
+  mem_limit: 512m
+
+  volumes:
+    - grafana_data:/var/lib/grafana
+    - ./grafana/provisioning:/etc/grafana/provisioning
+    - ./grafana/dashboards:/etc/grafana/provisioning/dashboards/json
+```
+
+---
+
+# Dashboard Backup Process
+
+Implemented dashboard backup using Grafana HTTP API and `jq`.
+
+Exported dashboards directly from Grafana using dashboard UID.
+
+---
+
+## Export Container Monitoring Dashboard
+
+```bash
+curl -s -u admin:samarth \
+http://localhost:3001/api/dashboards/uid/adnbqw4 \
+| jq '.dashboard | .id=null | .version=null' \
+> grafana/dashboards/container-monitoring.json
+```
+
+---
+
+## Export Logs Dashboard
+
+```bash
+curl -s -u admin:samarth \
+http://localhost:3001/api/dashboards/uid/ad8brcf \
+| jq '.dashboard | .id=null | .version=null' \
+> grafana/dashboards/logs-dashboard.json
+```
+
+---
+
+## Export Node Exporter Dashboard
+
+```bash
+curl -s -u admin:samarth \
+http://localhost:3001/api/dashboards/uid/rYdddlPWk \
+| jq '.dashboard | .id=null | .version=null' \
+> grafana/dashboards/node-exporter.json
+```
+
+---
+
+# JSON Validation
+
+Validated exported dashboard JSON files using:
+
+```bash
+jq . grafana/dashboards/container-monitoring.json
+```
+
+If no error appears, the dashboard JSON is valid.
+
+---
+
+# Alerting System Implementation
+
+Implemented Grafana alert provisioning for:
 
 * CPU alerts
 * Memory alerts
+* Disk usage alerts
 * Container down alerts
-* Email notifications
-* Grafana alert rules
+* Container-wise CPU alerts
+* Container-wise memory alerts
+
+Created:
+
+```yaml
+grafana/provisioning/alerting/alert-rules.yaml
+```
+
+Implemented PromQL-based alert rules.
 
 ---
 
-# Key Learnings
+# Configured Alert Queries
 
-This project helped in understanding:
+## CPU Usage Alert
 
-* Docker monitoring
-* Prometheus metrics
-* PromQL queries
-* Grafana dashboard creation
-* Loki log aggregation
-* Container observability
-* Monitoring architecture
-* SMTP integration
-* Multi-user Grafana management
-* Infrastructure monitoring
+```promql
+100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+```
 
 ---
 
-# Project Objective
+## Container Down Alert
 
-The main objective of this project is to build a production-style observability stack for monitoring Dockerized applications with:
-
-* Metrics monitoring
-* Log aggregation
-* Dashboard visualization
-* Resource monitoring
-* User access management
-* Future automation support
+```promql
+time() - container_last_seen{name!=""} > 30
+```
 
 ---
 
-# Future Goal
+## Container Wise CPU Alert
 
-The future goal is to make the entire monitoring stack fully automated so that after running:
+```promql
+sum(rate(container_cpu_usage_seconds_total{name!=""}[1m])) by (name) * 100
+```
+
+---
+
+## Container Wise Memory Alert
+
+```promql
+(
+container_memory_usage_bytes{name!=""}
+/
+container_spec_memory_limit_bytes{name!=""}
+) * 100
+```
+
+---
+
+## Disk Usage Alert
+
+```promql
+100 - (
+(node_filesystem_avail_bytes{mountpoint="/"} * 100)
+/
+node_filesystem_size_bytes{mountpoint="/"}
+)
+```
+
+---
+
+## Memory Usage Alert
+
+```promql
+(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+```
+
+---
+
+# Contact Point Configuration
+
+Created:
+
+```yaml
+grafana/provisioning/alerting/contact-points.yaml
+```
+
+```yaml
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: email-alert
+
+    receivers:
+      - uid: email1
+        type: email
+
+        settings:
+          addresses: ${GMAIL}
+```
+
+Configured Gmail SMTP notifications for Grafana alerts.
+
+---
+
+# Dashboard Recovery Testing
+
+Tested complete monitoring stack recovery using:
 
 ```bash
 docker-compose down -v
 docker-compose up -d
 ```
 
-all dashboards, datasources, alerts, and monitoring configurations are recreated automatically without manual setup.
+Verified automatic restoration of:
+
+* Dashboards
+* Datasources
+* Alert rules
+* Contact points
+* Folder structure
+* Monitoring configurations
+
+without manual recreation.
+
+---
+
+# Volume Backup Process
+
+Created Grafana volume backup using tar archive.
+
+## Backup Grafana Volume
+
+```bash
+docker run --rm \
+-v grafana_data:/source \
+-v $(pwd):/backup \
+alpine \
+tar czf /backup/grafana-backup.tar.gz -C /source .
+```
+
+---
+
+## Restore Grafana Volume
+
+```bash
+docker run --rm \
+-v grafana_data:/target \
+-v $(pwd):/backup \
+alpine \
+sh -c "cd /target && tar xzf /backup/grafana-backup.tar.gz"
+```
+
+This backup preserves:
+
+* Dashboards
+* Users
+* Alert history
+* Organizations
+* Grafana database
+* Settings
+
+---
+
+# Container Monitoring Dashboard Features
+
+Implemented:
+
+* Container-wise CPU monitoring
+* Container-wise memory monitoring
+* Total CPU utilization
+* Remaining CPU
+* Total memory usage
+* Available memory
+* Container filtering
+
+Used Grafana variables:
+
+```promql
+label_values(container_memory_usage_bytes,container_label_com_docker_compose_service)
+```
+
+---
+
+# Logging Dashboard Features
+
+Implemented centralized logging using Loki and Promtail.
+
+Used variable query:
+
+```logql
+{job="docker"}
+```
+
+Used panel query:
+
+```logql
+{job="docker", container_name_clean="$container"}
+```
+
+Implemented:
+
+* Dynamic container selection
+* Real-time log streaming
+* Container-wise log filtering
+
+---
+
+# Infrastructure Monitoring Components
+
+Integrated:
+
+* Prometheus
+* Grafana
+* Loki
+* Promtail
+* cAdvisor
+* Node Exporter
+
+Monitored:
+
+* Docker containers
+* Host machine resources
+* Container logs
+* System metrics
+* Resource utilization
+
+---
+
+
+# Key Learnings
+
+This project helped in understanding:
+
+* Docker monitoring and container observability
+* Prometheus metrics collection
+* PromQL query writing and optimization
+* Grafana dashboard creation and visualization
+* Loki centralized log aggregation
+* Promtail log shipping
+* cAdvisor container metrics monitoring
+* Node Exporter host-level monitoring
+* Docker resource management
+* Grafana SMTP configuration
+* Multi-user Grafana access management
+* Grafana alerting system
+* Grafana provisioning automation
+* Dashboard backup and restoration
+* Grafana dashboard JSON structure
+* Infrastructure-as-Code concepts
+* Docker volume backup and recovery
+* Grafana HTTP API usage
+* jq command usage for JSON processing
+* End-to-end monitoring architecture design
+
+---
+
+
+# Final Outcome
+
+Successfully built a production-style Docker monitoring and observability stack with:
+
+* Metrics monitoring
+* Centralized logging
+* Alerting system
+* Email notifications
+* Dashboard provisioning
+* Backup and recovery
+* Multi-container monitoring
+* Infrastructure automation
+
+The monitoring stack is now capable of fully restoring dashboards, datasources, and alerts automatically after container or volume deletion.
+
+
+
+
+---
