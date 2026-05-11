@@ -579,6 +579,10 @@ Configured Gmail SMTP notifications for Grafana alerts.
 
 ---
 
+<img width="1291" height="689" alt="image" src="https://github.com/user-attachments/assets/876980ba-128b-4c48-bc8f-1126127e11ef" />
+
+---
+
 # Dashboard Recovery Testing
 
 Tested complete monitoring stack recovery using:
