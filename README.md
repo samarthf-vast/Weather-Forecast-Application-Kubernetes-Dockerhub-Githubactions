@@ -751,3 +751,9 @@ The monitoring stack is now capable of fully restoring dashboards, datasources, 
 
 
 ---
+
+# Reference Taken
+
+https://oneuptime.com/blog/post/2026-01-30-grafana-provisioning-automation/view
+
+---
