@@ -300,6 +300,7 @@ grafana/
     └── alerting/
         ├── alert-rules.yaml
         └── contact-points.yaml
+        └── notification-policies.yaml
 ```
 
 ---
