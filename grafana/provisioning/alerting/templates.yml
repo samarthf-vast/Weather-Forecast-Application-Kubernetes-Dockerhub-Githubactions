@@ -1,0 +1,52 @@
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: simple-alert-template
+
+    template: |
+      {{ define "simple.message" }}
+
+      ALERT: {{ .CommonLabels.alertname }}
+
+      {{ range .Alerts }}
+
+      {{ .Annotations.summary }}
+
+      Severity: {{ .Labels.severity }}
+
+      {{ if eq .Labels.alertname "Container Down Alert" }}
+      Container stopped since:
+      {{ printf "%.0f" .Values.A }} seconds
+      {{ end }}
+
+      {{ if eq .Labels.alertname "CPU Alert" }}
+      CPU Usage:
+      {{ printf "%.2f" .Values.A }}%
+      {{ end }}
+
+      {{ if eq .Labels.alertname "Memory Usage Alert" }}
+      Memory Usage:
+      {{ printf "%.2f" .Values.A }}%
+      {{ end }}
+
+      {{ if eq .Labels.alertname "Container Wise CPU Alert" }}
+      Container CPU Usage:
+      {{ printf "%.2f" .Values.A }}%
+      {{ end }}
+
+      {{ if eq .Labels.alertname "Container Wise Memory Alert" }}
+      Container Memory Usage:
+      {{ printf "%.2f" .Values.A }}%
+      {{ end }}
+
+      {{ if eq .Labels.alertname "Disk Usage Alert" }}
+      Disk Usage:
+      {{ printf "%.2f" .Values.A }}%
+      {{ end }}
+
+      --------------------------------
+
+      {{ end }}
+
+      {{ end }}

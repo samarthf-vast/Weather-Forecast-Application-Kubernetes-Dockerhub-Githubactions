@@ -4,45 +4,48 @@ groups:
   - orgId: 1
     name: Infrastructure Alerts
     folder: Infrastructure
-    interval: 1m
-
+    interval: 5m
+    
     rules:
 
       # 1 CPU ALERT
-      - uid: cpualert1
-        title: CPU Alert
-        condition: B
+      # - uid: cpualert1
+      #   title: CPU Alert
+      #   condition: B
 
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            relativeTimeRange:
-              from: 300
-              to: 0
-            model:
-              expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
-              instant: true
-              refId: A
+      #   data:
+      #     - refId: A
+      #       datasourceUid: prometheus
+      #       relativeTimeRange:
+      #         from: 300
+      #         to: 0
+      #       model:
+      #         expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+      #         instant: true
+      #         refId: A
 
-          - refId: B
-            datasourceUid: "__expr__"
-            model:
-              expression: A
-              type: threshold
-              conditions:
-                - evaluator:
-                    params: [80]
-                    type: gt
+      #     - refId: B
+      #       datasourceUid: "__expr__"
+      #       model:
+      #         expression: A
+      #         type: threshold
+      #         conditions:
+      #           - evaluator:
+      #               params: [80]
+      #               type: gt
 
-        for: 1m
-        noDataState: OK
-        execErrState: Alerting
+      #   for: 5m
+      #   noDataState: OK
+      #   execErrState: Alerting
 
-        annotations:
-          summary: CPU usage above 80%
+      #   annotations:
+      #     summary: "CPU usage is above 80%"
 
-        labels:
-          severity: critical
+      #   labels:
+      #     severity: critical
+
+
+
 
       # 2 CONTAINER DOWN ALERT
       - uid: containerdown1
@@ -53,173 +56,193 @@ groups:
           - refId: A
             datasourceUid: prometheus
             relativeTimeRange:
-              from: 60
-              to: 0
-            model:
-              expr: time() - container_last_seen{name!=""} > 30
-              instant: true
-              refId: A
-
-          - refId: B
-            datasourceUid: "__expr__"
-            model:
-              expression: A
-              type: threshold
-              conditions:
-                - evaluator:
-                    params: [0]
-                    type: gt
-
-        for: 30s
-        noDataState: OK
-        execErrState: Alerting
-
-        annotations:
-          summary: Container is down
-
-        labels:
-          severity: critical
-
-      # 3 CONTAINER CPU ALERT
-      - uid: containercpu1
-        title: Container Wise CPU Alert
-        condition: B
-
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            relativeTimeRange:
               from: 300
               to: 0
             model:
-              expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[1m])) by (name) * 100
+              expr: time() - container_last_seen{container_label_com_docker_compose_service=~"mongo|frontend|weather-forecast-app-nginx-1|weather-forecast-app-backend-1|grafana|prometheus|cadvisor|weather-forecast-app-loki-1|promtail|node-exporter"}
               instant: true
               refId: A
 
           - refId: B
             datasourceUid: "__expr__"
             model:
+              type: reduce
+              reducer: last
               expression: A
-              type: threshold
-              conditions:
-                - evaluator:
-                    params: [80]
-                    type: gt
 
-        for: 1m
-        noDataState: OK
-        execErrState: Alerting
-
-        annotations:
-          summary: Container CPU above 80%
-
-        labels:
-          severity: critical
-
-      # 4 CONTAINER MEMORY ALERT
-      - uid: containermemory1
-        title: Container Wise Memory Alert
-        condition: B
-
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            relativeTimeRange:
-              from: 300
-              to: 0
-            model:
-              expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100
-              instant: true
-              refId: A
-
-          - refId: B
+          - refId: C
             datasourceUid: "__expr__"
             model:
-              expression: A
               type: threshold
+              expression: B
               conditions:
                 - evaluator:
-                    params: [80]
                     type: gt
+                    params: [60]
 
         for: 1m
-        noDataState: OK
-        execErrState: Alerting
 
         annotations:
-          summary: Container memory above 80%
+          summary: Container {{ $labels.name }} is down
 
         labels:
           severity: critical
 
-      # 5 DISK ALERT
-      - uid: diskalert1
-        title: Disk Usage Alert
-        condition: B
 
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            relativeTimeRange:
-              from: 300
-              to: 0
-            model:
-              expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / node_filesystem_size_bytes{mountpoint="/"})
-              instant: true
-              refId: A
 
-          - refId: B
-            datasourceUid: "__expr__"
-            model:
-              expression: A
-              type: threshold
-              conditions:
-                - evaluator:
-                    params: [80]
-                    type: gt
+      # # 3 CONTAINER CPU ALERT
+      # - uid: containercpu1
+      #   title: Container Wise CPU Alert
+      #   condition: B
 
-        for: 1m
-        noDataState: OK
-        execErrState: Alerting
+      #   data:
+      #     - refId: A
+      #       datasourceUid: prometheus
+      #       relativeTimeRange:
+      #         from: 300
+      #         to: 0
+      #       model:
+      #         expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) * 100
+      #         instant: true
+      #         refId: A
 
-        annotations:
-          summary: Disk usage above 80%
+      #     - refId: B
+      #       datasourceUid: "__expr__"
+      #       model:
+      #         expression: A
+      #         type: threshold
+      #         conditions:
+      #           - evaluator:
+      #               params: [80]
+      #               type: gt
 
-        labels:
-          severity: critical
+      #   for: 5m
+      #   noDataState: OK
+      #   execErrState: Alerting
 
-      # 6 MEMORY ALERT
-      - uid: memoryalert1
-        title: Memory Usage Alert
-        condition: B
+      #   annotations:
+      #     summary: "Container {{ $labels.name }} CPU usage above 80%"
 
-        data:
-          - refId: A
-            datasourceUid: prometheus
-            relativeTimeRange:
-              from: 300
-              to: 0
-            model:
-              expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
-              instant: true
-              refId: A
+      #   labels:
+      #     severity: critical
 
-          - refId: B
-            datasourceUid: "__expr__"
-            model:
-              expression: A
-              type: threshold
-              conditions:
-                - evaluator:
-                    params: [80]
-                    type: gt
+      # # 4 CONTAINER MEMORY ALERT
+      # - uid: containermemory1
+      #   title: Container Wise Memory Alert
+      #   condition: B
 
-        for: 1m
-        noDataState: OK
-        execErrState: Alerting
+      #   data:
+      #     - refId: A
+      #       datasourceUid: prometheus
+      #       relativeTimeRange:
+      #         from: 300
+      #         to: 0
+      #       model:
+      #         expr: |
+      #           (
+      #             container_memory_usage_bytes{
+      #             container_label_com_docker_compose_service!=""
+      #           }
+      #           /
+      #           container_spec_memory_limit_bytes{
+      #             container_label_com_docker_compose_service!=""
+      #            }
+      #           ) * 100
+      #         instant: true
+      #         refId: A
 
-        annotations:
-          summary: Memory usage above 80%
+      #     - refId: B
+      #       datasourceUid: "__expr__"
+      #       model:
+      #         expression: A
+      #         type: threshold
+      #         conditions:
+      #           - evaluator:
+      #               params: [80]
+      #               type: gt
 
-        labels:
-          severity: critical
+      #   for: 5m
+      #   noDataState: OK
+      #   execErrState: Alerting
+
+      #   annotations:
+      #     summary: >
+      #       Container {{
+      #       $labels.container_label_com_docker_compose_service
+      #       }} memory usage above 80%
+
+
+      #   labels:
+      #     severity: critical
+
+      # # 5 DISK ALERT
+      # - uid: diskalert1
+      #   title: Disk Usage Alert
+      #   condition: B
+
+      #   data:
+      #     - refId: A
+      #       datasourceUid: prometheus
+      #       relativeTimeRange:
+      #         from: 300
+      #         to: 0
+      #       model:
+      #         expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / node_filesystem_size_bytes{mountpoint="/"})
+      #         instant: true
+      #         refId: A
+
+      #     - refId: B
+      #       datasourceUid: "__expr__"
+      #       model:
+      #         expression: A
+      #         type: threshold
+      #         conditions:
+      #           - evaluator:
+      #               params: [80]
+      #               type: gt
+
+      #   for: 5m
+      #   noDataState: OK
+      #   execErrState: Alerting
+
+      #   annotations:
+      #     summary: Disk usage above 80%
+
+      #   labels:
+      #     severity: critical
+
+      # # 6 MEMORY ALERT
+      # - uid: memoryalert1
+      #   title: Memory Usage Alert
+      #   condition: B
+
+      #   data:
+      #     - refId: A
+      #       datasourceUid: prometheus
+      #       relativeTimeRange:
+      #         from: 300
+      #         to: 0
+      #       model:
+      #         expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+      #         instant: true
+      #         refId: A
+
+      #     - refId: B
+      #       datasourceUid: "__expr__"
+      #       model:
+      #         expression: A
+      #         type: threshold
+      #         conditions:
+      #           - evaluator:
+      #               params: [80]
+      #               type: gt
+
+      #   for: 5m
+      #   noDataState: OK
+      #   execErrState: Alerting
+
+      #   annotations:
+      #     summary: "Memory usage is above 80%"
+
+      #   labels:
+      #     severity: critical
