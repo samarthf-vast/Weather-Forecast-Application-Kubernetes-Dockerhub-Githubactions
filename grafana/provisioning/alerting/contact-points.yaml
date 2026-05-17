@@ -1,33 +1,45 @@
 apiVersion: 1
 
 contactPoints:
+
+  # =========================================
+  # CONTAINER ALERTS — EMAIL
+  # =========================================
   - orgId: 1
     name: container-email-alert
-
     receivers:
       - uid: container-email1
         type: email
-
+        disableResolveMessage: false
         settings:
           addresses: samarthf@valueaddsofttech.com
+          subject: '{{ template "container_alert_subject" . }}'
+          singleEmail: true
 
-          subject: >-
-            {{ if eq .Status "resolved" }}
-            ✅ Container Start Alert - {{ .CommonLabels.container }}
-            {{ else }}
-            🚨 Container Down Alert - {{ .CommonLabels.container }}
-            {{ end }}
+  # =========================================
+  # MONITORING ALERTS — EMAIL
+  # =========================================
+  - orgId: 1
+    name: monitoring-email-alert
+    receivers:
+      - uid: monitoring-email1
+        type: email
+        disableResolveMessage: false
+        settings:
+          addresses: samarthf@valueaddsofttech.com
+          subject: '{{ template "monitoring_alert_subject" . }}'
+          singleEmail: true
 
+  # =========================================
+  # INFRASTRUCTURE ALERTS — EMAIL
+  # =========================================
   - orgId: 1
     name: infra-email-alert
-
     receivers:
       - uid: infra-email1
         type: email
-
+        disableResolveMessage: false
         settings:
           addresses: samarthf@valueaddsofttech.com
-
-          subject: >-
-            🚨 [{{ .Status | toUpper }}]
-            {{ .CommonLabels.alertname }}
+          subject: '{{ template "infra_alert_subject" . }}'
+          singleEmail: true

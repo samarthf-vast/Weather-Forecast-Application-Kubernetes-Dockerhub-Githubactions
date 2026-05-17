@@ -1,0 +1,45 @@
+apiVersion: 1
+
+templates:
+
+  # =========================================
+  # CONTAINER ALERT — EMAIL SUBJECT
+  # =========================================
+  - orgId: 1
+    name: container_alert_subject
+    template: |
+      {{ define "container_alert_subject" -}}
+      {{- if eq .Status "resolved" -}}
+      ✅ Container Start Alert — {{ range $i, $a := .Alerts.Resolved }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+      {{- else -}}
+      🚨 {{ .CommonLabels.alertname }} — {{ range $i, $a := .Alerts.Firing }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+      {{- end -}}
+      {{- end }}
+
+  # =========================================
+  # MONITORING ALERT — EMAIL SUBJECT
+  # =========================================
+  - orgId: 1
+    name: monitoring_alert_subject
+    template: |
+      {{ define "monitoring_alert_subject" -}}
+      {{- if eq .Status "resolved" -}}
+      ✅ Monitoring Container Start Alert — {{ range $i, $a := .Alerts.Resolved }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+      {{- else -}}
+      🚨 {{ .CommonLabels.alertname }} — {{ range $i, $a := .Alerts.Firing }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+      {{- end -}}
+      {{- end }}
+
+  # =========================================
+  # INFRASTRUCTURE ALERT — EMAIL SUBJECT
+  # =========================================
+  - orgId: 1
+    name: infra_alert_subject
+    template: |
+      {{ define "infra_alert_subject" -}}
+      {{- if eq .Status "resolved" -}}
+      ✅ [RESOLVED] {{ .CommonLabels.alertname }}
+      {{- else -}}
+      🚨 [CRITICAL] {{ .CommonLabels.alertname }}
+      {{- end -}}
+      {{- end }}

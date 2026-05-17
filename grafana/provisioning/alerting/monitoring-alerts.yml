@@ -2,17 +2,17 @@ apiVersion: 1
 
 groups:
   - orgId: 1
-    name: Container Alerts
-    folder: Container Alerts
+    name: Monitoring Container Alerts
+    folder: Monitoring Alerts
     interval: 5m
 
     rules:
 
       # =========================================
-      # 1. CONTAINER CPU ALERT
+      # 1. MONITORING CONTAINER CPU ALERT
       # =========================================
-      - uid: containercpu1
-        title: Container Wise CPU Alert
+      - uid: monitorcpu1
+        title: Monitoring Container CPU Alert
 
         condition: B
 
@@ -31,7 +31,7 @@ groups:
                     (
                       sum by (container_label_com_docker_compose_service) (
                         rate(container_cpu_usage_seconds_total{
-                          container_label_app_role="application"
+                          container_label_app_role="monitoring"
                         }[5m])
                       ) * 100
                     ),
@@ -64,18 +64,18 @@ groups:
 
         annotations:
           summary: >-
-            Container {{ $labels.container }} CPU is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
+            Monitoring container {{ $labels.container }} CPU is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
 
         labels:
           severity: critical
-          category: container
+          category: monitoring
 
 
       # =========================================
-      # 2. CONTAINER MEMORY ALERT
+      # 2. MONITORING CONTAINER MEMORY ALERT
       # =========================================
-      - uid: containermemory1
-        title: Container Wise Memory Alert
+      - uid: monitormemory1
+        title: Monitoring Container Memory Alert
 
         condition: B
 
@@ -94,11 +94,11 @@ groups:
                     (
                       (
                         container_memory_usage_bytes{
-                          container_label_app_role="application"
+                          container_label_app_role="monitoring"
                         }
                         /
                         container_spec_memory_limit_bytes{
-                          container_label_app_role="application"
+                          container_label_app_role="monitoring"
                         }
                       ) * 100
                     ),
@@ -131,18 +131,19 @@ groups:
 
         annotations:
           summary: >-
-            Container {{ $labels.container }} memory is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
+            Monitoring container {{ $labels.container }} memory is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
 
         labels:
           severity: critical
-          category: container
+          category: monitoring
 
 
       # =========================================
-      # 3. CONTAINER DOWN ALERT
+      # 3. MONITORING CONTAINER DOWN ALERT
+      # (excludes Prometheus — if Prometheus dies it cannot alert itself)
       # =========================================
-      - uid: containerdown1
-        title: Container Down Alert
+      - uid: monitordown1
+        title: Monitoring Container Down Alert
 
         condition: B
 
@@ -161,7 +162,7 @@ groups:
                     (
                       time() - max_over_time(
                         container_last_seen{
-                          container_label_app_role="application"
+                          container_label_app_role="monitoring"
                         }[24h]
                       )
                     ),
@@ -194,8 +195,8 @@ groups:
 
         annotations:
           summary: >-
-            Container {{ $labels.container }} is DOWN — not seen for {{ $values.A.Value | printf "%.0f" }} seconds
+            Monitoring container {{ $labels.container }} is DOWN — not seen for {{ $values.A.Value | printf "%.0f" }} seconds
 
         labels:
           severity: critical
-          category: container
+          category: monitoring
