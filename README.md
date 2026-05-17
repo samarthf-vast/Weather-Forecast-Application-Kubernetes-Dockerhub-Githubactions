@@ -962,17 +962,12 @@ Container starts
 ✅ Email: "Container Start Alert — frontend"
 ```
 
-<!-- SCREENSHOT: Grafana Alert Rules page — Container Down Alert in Firing state -->
 
-<!-- SCREENSHOT: Gmail inbox — subject "🚨 Container Down Alert — frontend" -->
 
-<!-- SCREENSHOT: Email body open — red header, firing badge, View alert + Silence buttons -->
+<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/5f93b349-155c-47ef-a5cc-117e8b86ad46" />
 
-<!-- SCREENSHOT: Grafana Alert Rules page — back to Normal state -->
+<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/646b59d9-30c5-4b28-8968-225bc5941e66" />
 
-<!-- SCREENSHOT: Gmail inbox — subject "✅ Container Start Alert — frontend" -->
-
-<!-- SCREENSHOT: Email body open — green header, Running badge -->
 
 ---
 
@@ -988,33 +983,15 @@ Both start
 ✅ ONE email: "Container Start Alert — frontend, nginx"
 ```
 
-<!-- SCREENSHOT: Gmail inbox — grouped subject showing multiple containers -->
 
-<!-- SCREENSHOT: Email body — both containers listed with red left border -->
+<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/9931b0a2-caff-4957-849f-c14c138811b9" />
 
-<!-- SCREENSHOT: Email body — green header showing "✅ Container Start Alert" -->
+<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/44f358c1-59c3-469c-8ec9-59105dca8738" />
 
----
-
-### Scenario 3 — Containers Start at Different Times
-
-```
-frontend starts at 10:00
-      ↓  (~5 min)
-✅ Email: "Container Start Alert — frontend"
-
-nginx starts at 10:08
-      ↓  (~5 min)
-✅ Email: "Container Start Alert — nginx"
-```
-
-Both get separate immediate emails — no waiting for the other.
-
-<!-- SCREENSHOT: Two separate start alert emails in inbox -->
 
 ---
 
-### Scenario 4 — Container CPU High
+### Scenario 3 — Container CPU High
 
 ```
 CPU usage crosses 80% and stays for 5 minutes
@@ -1026,13 +1003,14 @@ CPU drops below 80%
 ✅ Resolved email
 ```
 
-<!-- SCREENSHOT: Grafana — Container Wise CPU Alert in Firing state -->
+<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/e0437578-2fa7-4dbd-be62-fab1aa9ef797" />
 
-<!-- SCREENSHOT: Email — CPU alert with usage percentage in summary -->
+<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/9cac2297-2bb8-421c-aa87-19ce27a420f9" />
+
 
 ---
 
-### Scenario 5 — Container Memory High
+### Scenario 4 — Container Memory High
 
 ```
 Memory usage crosses 80% for 5 minutes
@@ -1040,13 +1018,19 @@ Memory usage crosses 80% for 5 minutes
 🚨 Email: "Container Wise Memory Alert — mongo"
 ```
 
-<!-- SCREENSHOT: Grafana — Container Wise Memory Alert in Firing state -->
+Testing:
 
-<!-- SCREENSHOT: Email — Memory alert with percentage in summary -->
+sudo apt update
+sudo apt install stress -y
+
+docker exec -it weather-forecast-app-frontend-1 bash
+apt update && apt install stress -y
+stress --vm 1 --vm-bytes 450M --timeout 300s
+
 
 ---
 
-### Scenario 6 — Monitoring Container Down
+### Scenario 5 — Monitoring Container Down
 
 ```
 cadvisor stops
@@ -1054,13 +1038,10 @@ cadvisor stops
 🚨 Email: "Monitoring Container Down Alert — cadvisor"
 ```
 
-<!-- SCREENSHOT: Grafana — Monitoring Container Down Alert in Firing state -->
-
-<!-- SCREENSHOT: Email — monitoring alert email -->
 
 ---
 
-### Scenario 7 — Host Infrastructure Alert
+### Scenario 6 — Host Infrastructure Alert
 
 ```
 Host CPU/Memory/Disk crosses 80% for 5 minutes
@@ -1070,17 +1051,12 @@ Host CPU/Memory/Disk crosses 80% for 5 minutes
 🚨 Email: "[CRITICAL] Disk Usage Alert"
 ```
 
-<!-- SCREENSHOT: Grafana — all 3 infrastructure rules in Firing state -->
-
-<!-- SCREENSHOT: Email — infrastructure alert email -->
-
 ---
 
 ## Testing Guide
 
 ### Speed Up Testing (reduce wait time from 10 min → 2 min)
 
-Edit these files before testing, restore after:
 
 **`container-alerts.yml`** and **`monitoring-alerts.yml`**:
 ```yaml
