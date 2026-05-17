@@ -1,0 +1,207 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Container Alerts
+    folder: Container Alerts
+    interval: 1m
+
+    rules:
+
+      # =========================================
+      # 1. CONTAINER CPU ALERT
+      # =========================================
+      - uid: containercpu1
+        title: Container Wise CPU Alert
+
+        condition: B
+
+        data:
+          - refId: A
+            datasourceUid: prometheus
+
+            relativeTimeRange:
+              from: 300
+              to: 0
+
+            model:
+              expr: |
+                max by (container) (
+                  label_replace(
+                    (
+                      sum by (container_label_com_docker_compose_service) (
+                        rate(container_cpu_usage_seconds_total{
+                          container_label_com_docker_compose_service!=""
+                        }[5m])
+                      ) * 100
+                    ),
+                    "container",
+                    "$1",
+                    "container_label_com_docker_compose_service",
+                    "(.*)"
+                  )
+                )
+
+              instant: true
+              refId: A
+
+          - refId: B
+            datasourceUid: "__expr__"
+
+            model:
+              expression: A
+              type: threshold
+
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+
+        for: 5m
+
+        noDataState: OK
+        execErrState: Alerting
+
+        annotations:
+          summary: >
+            Container {{ $labels.container }}
+            CPU usage above 80%
+
+        labels:
+          severity: critical
+          category: container
+
+
+      # =========================================
+      # 2. CONTAINER MEMORY ALERT
+      # =========================================
+      - uid: containermemory1
+        title: Container Wise Memory Alert
+
+        condition: B
+
+        data:
+          - refId: A
+            datasourceUid: prometheus
+
+            relativeTimeRange:
+              from: 300
+              to: 0
+
+            model:
+              expr: |
+                max by (container) (
+                  label_replace(
+                    (
+                      (
+                        container_memory_usage_bytes{
+                          container_label_com_docker_compose_service!=""
+                        }
+                        /
+                        container_spec_memory_limit_bytes{
+                          container_label_com_docker_compose_service!=""
+                        }
+                      ) * 100
+                    ),
+                    "container",
+                    "$1",
+                    "container_label_com_docker_compose_service",
+                    "(.*)"
+                  )
+                )
+
+              instant: true
+              refId: A
+
+          - refId: B
+            datasourceUid: "__expr__"
+
+            model:
+              expression: A
+              type: threshold
+
+              conditions:
+                - evaluator:
+                    params: [80]
+                    type: gt
+
+        for: 5m
+
+        noDataState: OK
+        execErrState: Alerting
+
+        annotations:
+          summary: >
+            Container {{ $labels.container }}
+            memory usage above 80%
+
+        labels:
+          severity: critical
+          category: container
+
+
+      # =========================================
+      # 3. CONTAINER DOWN ALERT
+      # =========================================
+      - uid: containerdown1
+        title: Container Down Alert
+      
+        condition: B
+      
+        data:
+          - refId: A
+            datasourceUid: prometheus
+      
+            relativeTimeRange:
+              from: 600
+              to: 0
+      
+            model:
+              expr: |
+                max by (container) (
+                  label_replace(
+                    (
+                      time() - max_over_time(
+                        container_last_seen{
+                          container_label_com_docker_compose_service!=""
+                        }[10m]
+                      )
+                    ),
+                    "container",
+                    "$1",
+                    "container_label_com_docker_compose_service",
+                    "(.*)"
+                  )
+                )
+      
+              instant: true
+              refId: A
+      
+          - refId: B
+            datasourceUid: "__expr__"
+      
+            model:
+              expression: A
+              type: threshold
+      
+              conditions:
+                - evaluator:
+                    params: [60]
+                    type: gt
+      
+        for: 1m
+      
+        noDataState: Alerting
+        execErrState: Alerting
+      
+        annotations:
+          summary: >
+            Container {{ $labels.container }} is down
+      
+          description: >
+            Container {{ $labels.container }}
+            stopped responding for more than 60 seconds.
+      
+        labels:
+          severity: critical
+          category: container
