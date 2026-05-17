@@ -787,6 +787,458 @@ The monitoring stack is now capable of fully restoring dashboards, datasources, 
 
 ---
 
+# 12. Advanced Grafana Alerting System
+
+Implemented a fully provisioned, production-grade alerting system with:
+
+* Separate firing and resolved emails (never mixed in the same email)
+* Dynamic container filtering using Docker Compose labels
+* Modern HTML email template with colored headers and status badges
+* Custom email subjects per alert category
+* Continuous repeat alerts while issue persists
+* Automatic email on container recovery
+
+---
+
+## Alerting Architecture
+
+```plaintext
+Prometheus (metrics)
+        ↓
+Grafana Alert Rules (evaluate every 5m)
+        ↓
+Notification Policy (group + route)
+        ↓
+Contact Points (email)
+        ↓
+Gmail SMTP → Email
+```
+
+---
+
+## Provisioning File Structure
+
+```plaintext
+grafana/
+├── ng_alert_notification.html          ← Custom email HTML template
+└── provisioning/
+    └── alerting/
+        ├── container-alerts.yml        ← App container alert rules
+        ├── monitoring-alerts.yml       ← Monitoring container alert rules
+        ├── infrastructure-alerts.yml   ← Host CPU / Memory / Disk rules
+        ├── contact-points.yaml         ← Email contact points
+        ├── notification-policies.yaml  ← Routing and grouping rules
+        └── templates.yml               ← Email subject templates
+```
+
+---
+
+## Alert Rules Overview
+
+### Container Alerts (`container-alerts.yml`)
+
+Filtered dynamically using Docker label `app_role=application` — covers: **backend, frontend, mongo, nginx**
+
+| Alert | Trigger | Threshold | Email Heading |
+|---|---|---|---|
+| Container Down Alert | Container not seen | > 120s for 1m | `🚨 Container Down Alert` |
+| Container Start Alert | Container running | seen < 30s | `✅ Container Start Alert` |
+| Container Wise CPU Alert | Container CPU usage | > 80% for 5m | `🚨 Container Wise CPU Alert` |
+| Container Wise Memory Alert | Container memory usage | > 80% for 5m | `🚨 Container Wise Memory Alert` |
+
+### Monitoring Container Alerts (`monitoring-alerts.yml`)
+
+Filtered using label `app_role=monitoring` — covers: **prometheus, cadvisor, node-exporter, loki, promtail**
+
+| Alert | Trigger | Threshold |
+|---|---|---|
+| Monitoring Container Down Alert | Container not seen | > 120s for 1m |
+| Monitoring Container CPU Alert | Container CPU usage | > 80% for 5m |
+| Monitoring Container Memory Alert | Container memory usage | > 80% for 5m |
+
+> **Note:** If Prometheus itself goes down, no alerts can fire (it is the metrics engine). Use an external monitor (e.g. UptimeRobot) for `http://your-ip:9090/-/healthy`
+
+### Infrastructure Alerts (`infrastructure-alerts.yml`)
+
+Host-level metrics from Node Exporter
+
+| Alert | Trigger | Threshold |
+|---|---|---|
+| CPU Alert | Host CPU usage | > 80% for 5m |
+| Memory Usage Alert | Host RAM usage | > 80% for 5m |
+| Disk Usage Alert | Disk usage at `/` | > 80% for 5m |
+
+---
+
+## Email Behavior
+
+| Behavior | Detail |
+|---|---|
+| Firing and resolved NEVER mixed | Separate contact points per alert type |
+| Multiple containers down | ONE grouped email listing all |
+| Single container starts | Immediate individual email |
+| Multiple containers start (same time) | ONE grouped email |
+| Continuous firing | Email repeats every 5 minutes while still down |
+| Container Start Alert | Fires once per recovery event |
+| No "Grouped by" header | Removed from HTML template |
+| View Alert + Silence buttons | Working, links to Grafana |
+| Email header color | 🔴 Red for firing, 🟢 Green for start/resolved |
+
+---
+
+## PromQL Queries Used
+
+### Container Down Detection
+```promql
+min by (container) (
+  label_replace(
+    time() - max_over_time(
+      container_last_seen{container_label_app_role="application"}[24h]
+    ),
+    "container", "$1",
+    "container_label_com_docker_compose_service", "(.*)"
+  )
+)
+```
+Threshold: `> 120` seconds
+
+### Container Start Detection
+```promql
+min by (container) (
+  label_replace(
+    time() - container_last_seen{container_label_app_role="application"},
+    "container", "$1",
+    "container_label_com_docker_compose_service", "(.*)"
+  )
+)
+```
+Threshold: `< 30` seconds
+
+### Container CPU
+```promql
+max by (container) (
+  label_replace(
+    sum by (container_label_com_docker_compose_service) (
+      rate(container_cpu_usage_seconds_total{container_label_app_role="application"}[5m])
+    ) * 100,
+    "container", "$1",
+    "container_label_com_docker_compose_service", "(.*)"
+  )
+)
+```
+Threshold: `> 80` %
+
+### Container Memory
+```promql
+max by (container) (
+  label_replace(
+    (
+      container_memory_usage_bytes{container_label_app_role="application"}
+      /
+      container_spec_memory_limit_bytes{container_label_app_role="application"}
+    ) * 100,
+    "container", "$1",
+    "container_label_com_docker_compose_service", "(.*)"
+  )
+)
+```
+Threshold: `> 80` %
+
+---
+
+## Complete Alert Scenarios
+
+### Scenario 1 — Single Container Down + Start
+
+```
+Container stops
+      ↓  (~5–10 min)
+🚨 Email: "Container Down Alert — frontend"
+      ↓  (every 5 min while still down)
+🚨 Repeat email: "Container Down Alert — frontend"
+      ↓
+Container starts
+      ↓  (~5 min)
+✅ Email: "Container Start Alert — frontend"
+```
+
+<!-- SCREENSHOT: Grafana Alert Rules page — Container Down Alert in Firing state -->
+
+<!-- SCREENSHOT: Gmail inbox — subject "🚨 Container Down Alert — frontend" -->
+
+<!-- SCREENSHOT: Email body open — red header, firing badge, View alert + Silence buttons -->
+
+<!-- SCREENSHOT: Grafana Alert Rules page — back to Normal state -->
+
+<!-- SCREENSHOT: Gmail inbox — subject "✅ Container Start Alert — frontend" -->
+
+<!-- SCREENSHOT: Email body open — green header, Running badge -->
+
+---
+
+### Scenario 2 — Multiple Containers Down (grouped)
+
+```
+frontend stops + nginx stops (within same eval window)
+      ↓  (~5–10 min)
+🚨 ONE email: "Container Down Alert — frontend, nginx"
+      ↓
+Both start
+      ↓  (~5 min)
+✅ ONE email: "Container Start Alert — frontend, nginx"
+```
+
+<!-- SCREENSHOT: Gmail inbox — grouped subject showing multiple containers -->
+
+<!-- SCREENSHOT: Email body — both containers listed with red left border -->
+
+<!-- SCREENSHOT: Email body — green header showing "✅ Container Start Alert" -->
+
+---
+
+### Scenario 3 — Containers Start at Different Times
+
+```
+frontend starts at 10:00
+      ↓  (~5 min)
+✅ Email: "Container Start Alert — frontend"
+
+nginx starts at 10:08
+      ↓  (~5 min)
+✅ Email: "Container Start Alert — nginx"
+```
+
+Both get separate immediate emails — no waiting for the other.
+
+<!-- SCREENSHOT: Two separate start alert emails in inbox -->
+
+---
+
+### Scenario 4 — Container CPU High
+
+```
+CPU usage crosses 80% and stays for 5 minutes
+      ↓
+🚨 Email: "Container Wise CPU Alert — backend"
+      ↓
+CPU drops below 80%
+      ↓
+✅ Resolved email
+```
+
+<!-- SCREENSHOT: Grafana — Container Wise CPU Alert in Firing state -->
+
+<!-- SCREENSHOT: Email — CPU alert with usage percentage in summary -->
+
+---
+
+### Scenario 5 — Container Memory High
+
+```
+Memory usage crosses 80% for 5 minutes
+      ↓
+🚨 Email: "Container Wise Memory Alert — mongo"
+```
+
+<!-- SCREENSHOT: Grafana — Container Wise Memory Alert in Firing state -->
+
+<!-- SCREENSHOT: Email — Memory alert with percentage in summary -->
+
+---
+
+### Scenario 6 — Monitoring Container Down
+
+```
+cadvisor stops
+      ↓  (~5–10 min)
+🚨 Email: "Monitoring Container Down Alert — cadvisor"
+```
+
+<!-- SCREENSHOT: Grafana — Monitoring Container Down Alert in Firing state -->
+
+<!-- SCREENSHOT: Email — monitoring alert email -->
+
+---
+
+### Scenario 7 — Host Infrastructure Alert
+
+```
+Host CPU/Memory/Disk crosses 80% for 5 minutes
+      ↓
+🚨 Email: "[CRITICAL] CPU Alert"
+🚨 Email: "[CRITICAL] Memory Usage Alert"
+🚨 Email: "[CRITICAL] Disk Usage Alert"
+```
+
+<!-- SCREENSHOT: Grafana — all 3 infrastructure rules in Firing state -->
+
+<!-- SCREENSHOT: Email — infrastructure alert email -->
+
+---
+
+## Testing Guide
+
+### Speed Up Testing (reduce wait time from 10 min → 2 min)
+
+Edit these files before testing, restore after:
+
+**`container-alerts.yml`** and **`monitoring-alerts.yml`**:
+```yaml
+interval: 1m        # change from 5m
+for: 30s            # change from 1m or 5m
+```
+
+**`notification-policies.yaml`** (all routes):
+```yaml
+group_wait: 10s       # change from 30s
+group_interval: 1m    # change from 5m
+repeat_interval: 1m   # change from 5m or 24h
+```
+
+Then restart Grafana:
+```bash
+docker compose -f docker-compose-monitoring.yml restart grafana
+```
+
+> **Important:** Restore all values to production settings after testing is complete.
+
+---
+
+### Test 1 — Container Down + Start Alert
+
+```bash
+# Step 1: Stop a container
+docker stop frontend
+
+# Wait ~2 min (testing) or ~10 min (production)
+
+# Step 2: Check Grafana
+# http://localhost:3001 → Alerting → Alert Rules
+# "Container Down Alert" should show red FIRING badge
+
+# Step 3: Check email inbox
+# Subject: 🚨 Container Down Alert — frontend
+
+# Step 4: Start the container back
+docker start frontend
+
+# Wait ~2 min
+# Subject: ✅ Container Start Alert — frontend
+```
+
+---
+
+### Test 2 — Multiple Containers Down + Start
+
+```bash
+# Stop two containers at the same time
+docker stop frontend nginx
+
+# Wait — ONE grouped email expected
+# Subject: 🚨 Container Down Alert — frontend, nginx
+
+# Start one (test separate start alert)
+docker start nginx
+# Wait — separate email for nginx only
+# Subject: ✅ Container Start Alert — nginx
+
+# Start the other
+docker start frontend
+# Wait — separate email for frontend
+# Subject: ✅ Container Start Alert — frontend
+```
+
+---
+
+### Test 3 — Container CPU / Memory Alert
+
+```bash
+# Step 1: Temporarily lower threshold to trigger immediately
+# In container-alerts.yml → find "Container Wise CPU Alert" → change:
+#   params: [80]  →  params: [1]
+
+# Step 2: Restart Grafana
+docker compose -f docker-compose-monitoring.yml restart grafana
+
+# Wait 5 min (or 1 min if interval reduced)
+# Email: 🚨 Container Wise CPU Alert — backend, frontend, mongo, nginx
+
+# Step 3: Restore threshold back to 80 and restart Grafana
+```
+
+Repeat the same for **Container Wise Memory Alert**.
+
+---
+
+### Test 4 — Monitoring Container Down
+
+```bash
+# Stop cadvisor
+docker stop cadvisor
+
+# Wait ~2 min
+# Email: 🚨 Monitoring Container Down Alert — cadvisor
+
+# Restore
+docker compose -f docker-compose-monitoring.yml up -d cadvisor
+```
+
+---
+
+### Test 5 — Infrastructure CPU / Memory / Disk Alert
+
+```bash
+# Temporarily lower all 3 thresholds in infrastructure-alerts.yml
+# params: [80]  →  params: [1]
+# Restart Grafana, wait 5 min
+# Email: 🚨 [CRITICAL] CPU Alert
+# Email: 🚨 [CRITICAL] Memory Usage Alert
+# Email: 🚨 [CRITICAL] Disk Usage Alert
+
+# Restore thresholds back to 80 after testing
+```
+
+---
+
+## Dynamic Label Filtering
+
+All alert rules use Docker Compose labels instead of hardcoded container names:
+
+```yaml
+# docker-compose-app.yml — app containers
+labels:
+  - "app_role=application"
+
+# docker-compose-monitoring.yml — monitoring containers (except Grafana)
+labels:
+  - "app_role=monitoring"
+```
+
+PromQL filter:
+```promql
+container_label_app_role="application"   # targets backend, frontend, mongo, nginx
+container_label_app_role="monitoring"    # targets prometheus, cadvisor, node-exporter, loki, promtail
+```
+
+This means adding a new container with the correct label automatically includes it in alerts — no rule changes needed.
+
+---
+
+## Email Template Customizations
+
+Modified `grafana/ng_alert_notification.html` (Grafana's default email template):
+
+| Customization | Detail |
+|---|---|
+| Colored header banner | Red gradient for firing, Green gradient for start/resolved |
+| Left border on cards | Red `#E53E3E` for firing, Green `#38A169` for resolved/start |
+| Badge color | Red "Firing" badge for down alerts, Green "Running" badge for start alerts |
+| Removed "Grouped by" section | Cleaner email with no label metadata header |
+| "Container Start Alert" heading | Resolved section shows start-specific title |
+| View Alert + Silence buttons | Working links back to Grafana instance |
+
+---
+
 # Reference Taken
 
 https://oneuptime.com/blog/post/2026-01-30-grafana-provisioning-automation/view

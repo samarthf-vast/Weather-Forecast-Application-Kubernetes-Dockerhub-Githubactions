@@ -17,6 +17,16 @@ templates:
       {{- end }}
 
   # =========================================
+  # CONTAINER START ALERT — EMAIL SUBJECT
+  # =========================================
+  - orgId: 1
+    name: container_start_subject
+    template: |
+      {{ define "container_start_subject" -}}
+      ✅ Container Start Alert — {{ range $i, $a := .Alerts.Firing }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+      {{- end }}
+
+  # =========================================
   # MONITORING ALERT — EMAIL SUBJECT
   # =========================================
   - orgId: 1

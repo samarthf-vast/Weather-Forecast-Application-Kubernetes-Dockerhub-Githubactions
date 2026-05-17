@@ -17,6 +17,20 @@ contactPoints:
           singleEmail: true
 
   # =========================================
+  # CONTAINER START ALERTS — EMAIL
+  # =========================================
+  - orgId: 1
+    name: container-start-email-alert
+    receivers:
+      - uid: container-start-email1
+        type: email
+        disableResolveMessage: true
+        settings:
+          addresses: samarthf@valueaddsofttech.com
+          subject: '{{ template "container_start_subject" . }}'
+          singleEmail: true
+
+  # =========================================
   # MONITORING ALERTS — EMAIL
   # =========================================
   - orgId: 1

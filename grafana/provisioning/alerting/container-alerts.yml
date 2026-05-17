@@ -199,3 +199,71 @@ groups:
         labels:
           severity: critical
           category: container
+
+
+      # =========================================
+      # 4. CONTAINER START ALERT
+      # =========================================
+      - uid: containerstart1
+        title: Container Start Alert
+
+        condition: B
+
+        data:
+          - refId: A
+            datasourceUid: prometheus
+
+            relativeTimeRange:
+              from: 600
+              to: 0
+
+            model:
+              expr: |
+                min by (container) (
+                  label_replace(
+                    time() - container_last_seen{container_label_app_role="application"},
+                    "container", "$1",
+                    "container_label_com_docker_compose_service", "(.*)"
+                  )
+                )
+                and on(container) (
+                  max_over_time(
+                    min by (container) (
+                      label_replace(
+                        time() - container_last_seen{container_label_app_role="application"},
+                        "container", "$1",
+                        "container_label_com_docker_compose_service", "(.*)"
+                      )
+                    )[10m:30s]
+                  ) > 120
+                )
+
+              instant: true
+              refId: A
+
+          - refId: B
+            datasourceUid: "__expr__"
+
+            model:
+              expression: A
+              type: threshold
+
+              conditions:
+                - evaluator:
+                    params: [30]
+                    type: lt
+
+        for: 0s
+
+        noDataState: OK
+        execErrState: OK
+
+        annotations:
+          summary: >-
+            Container {{ $labels.container }} is UP and running
+
+        labels:
+          severity: info
+          category: container-start
+
+
