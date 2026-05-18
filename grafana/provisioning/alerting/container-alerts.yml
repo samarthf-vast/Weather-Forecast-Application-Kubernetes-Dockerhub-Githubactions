@@ -113,8 +113,7 @@ groups:
           category: container
 
 
-      # 3. CONTAINER DOWN ALERT 
-      
+      # 3. CONTAINER DOWN ALERT
       - uid: containerdown1
         title: Container Down Alert
         condition: B
@@ -152,7 +151,7 @@ groups:
                 - evaluator:
                     params: [120]
                     type: gt
-        for: 1m
+        for: 0s
         noDataState: Alerting
         execErrState: Alerting
         annotations:
@@ -174,10 +173,11 @@ groups:
   #   With 1m eval, container will be at most 60s old → always caught ✅
   #
   # PART 2 — Was it previously DOWN for 2+ minutes?
-  #   max_over_time([10m:30s]) > 120
-  #   Looks back 10 min, samples every 30s (20 samples)
-  #   If any sample shows container was not seen for 2+ min → was truly down
-  #   Prevents start alerts for brief Docker restarts that never triggered down
+  #   max_over_time([2h:1m]) > 120
+  #   Looks back 2h, samples every 1m (120 samples)
+  #   container_last_seen goes stale after ~5m; the window where values > 120
+  #   is only minutes 2–5 after stopping. A 10m window misses it if the
+  #   container was down > ~11m. 2h window covers up to ~115m of downtime.
   # ─────────────────────────────────────────────────────────────────────────
   - orgId: 1
     name: Container Start Alerts
@@ -194,7 +194,7 @@ groups:
           - refId: A
             datasourceUid: prometheus
             relativeTimeRange:
-              from: 600
+              from: 7200
               to: 0
             model:
               expr: |
@@ -213,7 +213,7 @@ groups:
                         "container", "$1",
                         "container_label_com_docker_compose_service", "(.*)"
                       )
-                    )[10m:30s]
+                    )[2h:1m]
                   ) > 120
                 )
               instant: true

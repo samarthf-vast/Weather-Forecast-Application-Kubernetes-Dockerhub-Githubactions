@@ -63,7 +63,7 @@ services:
     container_name: cadvisor
     ports:
       - "8080:8080"
-    mem_limit: 512m
+    mem_limit: 1g
     labels:
       - "app_role=monitoring"
     volumes:
