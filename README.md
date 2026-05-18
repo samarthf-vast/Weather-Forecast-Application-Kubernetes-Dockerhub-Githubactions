@@ -25,7 +25,7 @@ The monitoring stack is fully containerized using Docker Compose.
 | Prometheus      | Metrics collection           |
 | Grafana         | Visualization and dashboards |
 | Loki            | Centralized log aggregation  |
-| Promtail        | Log collection agent         |
+| Grafana Alloy   | Log collection agent (replaced deprecated Promtail) |
 | cAdvisor        | Container metrics exporter   |
 | Node Exporter   | Host system metrics exporter |
 | MongoDB         | Application database         |
@@ -48,7 +48,7 @@ Docker Containers
 
 Docker Logs
         ↓
-    Promtail
+  Grafana Alloy
         ↓
        Loki
         ↓
@@ -259,7 +259,7 @@ Integrated services:
 * Prometheus
 * Grafana
 * Loki
-* Promtail
+* Grafana Alloy (replaced Promtail)
 * cAdvisor
 * Node Exporter
 
@@ -724,7 +724,7 @@ Integrated:
 * Prometheus
 * Grafana
 * Loki
-* Promtail
+* Grafana Alloy (replaced Promtail)
 * cAdvisor
 * Node Exporter
 
@@ -839,16 +839,16 @@ grafana/
 
 Filtered dynamically using Docker label `app_role=application` — covers: **backend, frontend, mongo, nginx**
 
-| Alert | Trigger | Threshold | Email Heading |
-|---|---|---|---|
-| Container Down Alert | Container not seen | > 120s for 1m | `🚨 Container Down Alert` |
-| Container Start Alert | Container running | seen < 30s | `✅ Container Start Alert` |
-| Container Wise CPU Alert | Container CPU usage | > 80% for 5m | `🚨 Container Wise CPU Alert` |
-| Container Wise Memory Alert | Container memory usage | > 80% for 5m | `🚨 Container Wise Memory Alert` |
+| Alert | Group | Interval | Trigger | Threshold | Email Heading |
+|---|---|---|---|---|---|
+| Container Down Alert | Container Alerts | 5m | Container not seen | > 120s for 1m | `🚨 Container Down Alert` |
+| Container Start Alert | Container Start Alerts | 1m | Container running after being down | seen < 90s AND was down > 120s | `✅ Container Start Alert` |
+| Container Wise CPU Alert | Container Alerts | 5m | Container CPU usage | > 80% for 5m | `🚨 Container Wise CPU Alert` |
+| Container Wise Memory Alert | Container Alerts | 5m | Container memory usage | > 80% for 5m | `🚨 Container Wise Memory Alert` |
 
 ### Monitoring Container Alerts (`monitoring-alerts.yml`)
 
-Filtered using label `app_role=monitoring` — covers: **prometheus, cadvisor, node-exporter, loki, promtail**
+Filtered using label `app_role=monitoring` — covers: **prometheus, cadvisor, node-exporter, loki, alloy**
 
 | Alert | Trigger | Threshold |
 |---|---|---|
@@ -911,8 +911,19 @@ min by (container) (
     "container_label_com_docker_compose_service", "(.*)"
   )
 )
+and on(container) (
+  max_over_time(
+    min by (container) (
+      label_replace(
+        time() - container_last_seen{container_label_app_role="application"},
+        "container", "$1",
+        "container_label_com_docker_compose_service", "(.*)"
+      )
+    )[10m:30s]
+  ) > 120
+)
 ```
-Threshold: `< 30` seconds
+Threshold: `< 90` seconds (separate 1m evaluation group — catches container within 60s of startup)
 
 ### Container CPU
 ```promql
@@ -1208,14 +1219,116 @@ This means adding a new container with the correct label automatically includes 
 
 Modified `grafana/ng_alert_notification.html` (Grafana's default email template):
 
-| Customization | Detail |
-|---|---|
-| Colored header banner | Red gradient for firing, Green gradient for start/resolved |
-| Left border on cards | Red `#E53E3E` for firing, Green `#38A169` for resolved/start |
-| Badge color | Red "Firing" badge for down alerts, Green "Running" badge for start alerts |
-| Removed "Grouped by" section | Cleaner email with no label metadata header |
-| "Container Start Alert" heading | Resolved section shows start-specific title |
-| View Alert + Silence buttons | Working links back to Grafana instance |
+| Customization                   | Detail                                                     |
+|---                              |---                                                         |
+| Colored header banner           | Red gradient for firing, Green gradient for start/resolved |
+| Left border on cards            | Red  for firing, Green  for resolved/start                 | 
+| Badge color                     | Red "Firing" badge, Green "Running" badge                  |
+| Removed "Grouped by" section    | Cleaner email with no label metadata header                |
+| "Container Start Alert" heading | Resolved section shows start-specific title                |
+| View Alert + Silence buttons    | Working links back to Grafana instance                     |
+
+---
+
+# 13. Grafana Alloy Migration and Alerting Fixes
+
+---
+
+## Why Promtail Was Replaced
+
+Grafana Labs officially deprecated **Promtail** in favour of **Grafana Alloy**. The last Promtail release was `v3.0.0` — no new features, no security patches, no bug fixes going forward. Alloy is the unified successor agent that replaces Promtail, Grafana Agent.
+
+---
+
+## Files Changed
+
+### 1. `docker-compose-monitoring.yml`
+
+
+```
+
+# NEW
+alloy:
+  image: grafana/alloy:v1.16.1
+  container_name: alloy
+  user: root
+  labels:
+    - "app_role=monitoring"
+  volumes:
+    - /var/log:/var/log
+    - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./alloy-config.alloy:/etc/alloy/config.alloy
+  command: run /etc/alloy/config.alloy
+  mem_limit: 512m
+  networks:
+    - shared-monitoring
+```
+
+**DNS added to Grafana service** (fixes `smtp.gmail.com` lookup timeout inside Docker):
+
+```yaml
+grafana:
+  dns:
+    - 8.8.8.8
+    - 8.8.4.4
+```
+
+---
+
+### 2. `alloy-config.alloy` (new file — replaces `promtail-config.yml`)
+
+Full 1:1 replacement of `promtail-config.yml` using Alloy's River/HCL syntax.
+
+All 7 Docker labels preserved — critical ones used by dashboards:
+
+| Label                                                     | Used by |
+|                                              |                                               |
+| `job=docker`                                 |  Logs dashboard base filter `{job="docker"}`  |
+| `container_name_clean`                       | Logs dashboard variable dropdown              |
+| `container_id`                               | Identification                                |
+| `container_name`                             | Raw name with leading `/`                     |
+| `container_label_com_docker_compose_service` | Compose service name                          |
+| `stream`                                     | stdout / stderr                               |
+| `compose_project`                            | Project grouping                              |
+
+```hcl
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+discovery.relabel "docker_meta" {
+  targets = discovery.docker.containers.targets
+  # ... 7 relabeling rules ...
+}
+
+loki.source.docker "docker_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.docker_meta.output
+  forward_to = [loki.process.docker_pipeline.receiver]
+}
+
+loki.process "docker_pipeline" {
+  forward_to = [loki.write.loki_push.receiver]
+  stage.docker {}
+}
+
+loki.write "loki_push" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+```
+
+---
+![alt text](image.png)
+
+![alt text](image-1.png)
+
+![alt text](image-2.png)
+
+![alt text](image-3.png)
 
 ---
 

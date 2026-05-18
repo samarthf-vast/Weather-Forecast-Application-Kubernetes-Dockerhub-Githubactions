@@ -25,7 +25,7 @@ services:
       - "3000:3000"
     depends_on:
       - backend
-    mem_limit: 512m
+    mem_limit: 1g
     labels:
       - "app_role=application"
     networks:

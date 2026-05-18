@@ -1,4 +1,6 @@
 
+# DEPRECATED: Promtail replaced by Grafana Alloy 
+
 # server:
 #   http_listen_port: 9080
 

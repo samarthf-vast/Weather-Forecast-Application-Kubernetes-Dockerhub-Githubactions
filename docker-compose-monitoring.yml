@@ -21,6 +21,9 @@ services:
     ports:
       - "3001:3000"
     mem_limit: 512m
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     env_file:
       - .env
     environment:
