@@ -8,9 +8,7 @@ groups:
 
     rules:
 
-      # =========================================
       # 1. MONITORING CONTAINER CPU ALERT
-      # =========================================
       - uid: monitorcpu1
         title: Monitoring Container CPU Alert
 
@@ -71,9 +69,8 @@ groups:
           category: monitoring
 
 
-      # =========================================
+      
       # 2. MONITORING CONTAINER MEMORY ALERT
-      # =========================================
       - uid: monitormemory1
         title: Monitoring Container Memory Alert
 
@@ -138,10 +135,10 @@ groups:
           category: monitoring
 
 
-      # =========================================
+      
       # 3. MONITORING CONTAINER DOWN ALERT
       # (excludes Prometheus — if Prometheus dies it cannot alert itself)
-      # =========================================
+      
       - uid: monitordown1
         title: Monitoring Container Down Alert
 

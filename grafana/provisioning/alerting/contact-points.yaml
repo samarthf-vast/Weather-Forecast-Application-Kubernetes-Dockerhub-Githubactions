@@ -2,23 +2,23 @@ apiVersion: 1
 
 contactPoints:
 
-  # =========================================
+  
   # CONTAINER ALERTS — EMAIL
-  # =========================================
+  
   - orgId: 1
     name: container-email-alert
     receivers:
       - uid: container-email1
         type: email
-        disableResolveMessage: false
+        disableResolveMessage: true
         settings:
           addresses: samarthf@valueaddsofttech.com
           subject: '{{ template "container_alert_subject" . }}'
           singleEmail: true
 
-  # =========================================
+  
   # CONTAINER START ALERTS — EMAIL
-  # =========================================
+
   - orgId: 1
     name: container-start-email-alert
     receivers:
@@ -30,9 +30,9 @@ contactPoints:
           subject: '{{ template "container_start_subject" . }}'
           singleEmail: true
 
-  # =========================================
+  
   # MONITORING ALERTS — EMAIL
-  # =========================================
+  
   - orgId: 1
     name: monitoring-email-alert
     receivers:
@@ -44,9 +44,9 @@ contactPoints:
           subject: '{{ template "monitoring_alert_subject" . }}'
           singleEmail: true
 
-  # =========================================
+  
   # INFRASTRUCTURE ALERTS — EMAIL
-  # =========================================
+  
   - orgId: 1
     name: infra-email-alert
     receivers:

@@ -8,9 +8,9 @@ groups:
 
     rules:
 
-      # =========================================
+      
       # 1. CONTAINER CPU ALERT
-      # =========================================
+      
       - uid: containercpu1
         title: Container Wise CPU Alert
 
@@ -71,9 +71,9 @@ groups:
           category: container
 
 
-      # =========================================
+      
       # 2. CONTAINER MEMORY ALERT
-      # =========================================
+      
       - uid: containermemory1
         title: Container Wise Memory Alert
 
@@ -138,9 +138,9 @@ groups:
           category: container
 
 
-      # =========================================
+      
       # 3. CONTAINER DOWN ALERT
-      # =========================================
+    
       - uid: containerdown1
         title: Container Down Alert
 
@@ -201,9 +201,9 @@ groups:
           category: container
 
 
-      # =========================================
+      
       # 4. CONTAINER START ALERT
-      # =========================================
+    
       - uid: containerstart1
         title: Container Start Alert
 

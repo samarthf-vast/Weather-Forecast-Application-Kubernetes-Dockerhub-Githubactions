@@ -84,9 +84,26 @@ services:
     networks:
       - shared-monitoring
 
-  promtail:
-    image: grafana/promtail:3.0.0
-    container_name: promtail
+  # ── DEPRECATED: Promtail replaced by Grafana Alloy 
+  # promtail:
+  #   image: grafana/promtail:3.0.0
+  #   container_name: promtail
+  #   user: root
+  #   labels:
+  #     - "app_role=monitoring"
+  #   volumes:
+  #     - /var/log:/var/log
+  #     - /var/lib/docker/containers:/var/lib/docker/containers:ro
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - ./promtail-config.yml:/etc/promtail/promtail.yml
+  #   command: -config.file=/etc/promtail/promtail.yml
+  #   mem_limit: 512m
+  #   networks:
+  #     - shared-monitoring
+
+  alloy:
+    image: grafana/alloy:v1.16.1
+    container_name: alloy
     user: root
     labels:
       - "app_role=monitoring"
@@ -94,8 +111,8 @@ services:
       - /var/log:/var/log
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./promtail-config.yml:/etc/promtail/promtail.yml
-    command: -config.file=/etc/promtail/promtail.yml
+      - ./alloy-config.alloy:/etc/alloy/config.alloy
+    command: run /etc/alloy/config.alloy
     mem_limit: 512m
     networks:
       - shared-monitoring
