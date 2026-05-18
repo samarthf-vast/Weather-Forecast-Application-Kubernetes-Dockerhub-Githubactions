@@ -1027,6 +1027,8 @@ docker exec -it weather-forecast-app-frontend-1 bash
 apt update && apt install stress -y
 stress --vm 1 --vm-bytes 450M --timeout 300s
 
+<img width="1283" height="644" alt="image" src="https://github.com/user-attachments/assets/401e1cbd-8c49-45bd-a0ab-f0a4d7a156cc" />
+
 
 ---
 
