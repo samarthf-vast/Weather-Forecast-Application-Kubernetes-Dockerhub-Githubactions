@@ -1,4 +1,3 @@
+k8s/secrets/
 .env
-backend/.env.development
-backend/.env.production
-backend/.env.test
+k8s/secrets/

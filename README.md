@@ -1,1339 +1,652 @@
-# Weather Forecast Application Grafana Monitoring Task
+# Weather Forecast App — Kubernetes Deployment
+
+A full-stack weather application deployed on Kubernetes (Minikube) with a complete observability stack: metrics, logs, dashboards, and alerting.
+
+---
 
 ## Project Overview
 
-This project implements a complete monitoring and logging solution for a Dockerized Weather Forecast Application using Prometheus, Grafana, Loki, Promtail, cAdvisor, and Node Exporter.
-
-The goal of this project is to monitor:
-
-* Container CPU usage
-* Container Memory usage
-* Host system metrics
-* Docker container logs
-* Real-time infrastructure monitoring
-* Centralized log aggregation
-
-The monitoring stack is fully containerized using Docker Compose.
+The application lets users search for weather by city name. It stores search history in MongoDB and exposes Prometheus metrics from the backend. The monitoring stack collects container metrics (cAdvisor), host metrics (Node Exporter), and pod logs (Grafana Alloy → Loki), all visualized in Grafana.
 
 ---
 
-# Technologies Used
-
-| Tool            | Purpose                      |
-| --------------- | ---------------------------- |
-| Docker Compose  | Container orchestration      |
-| Prometheus      | Metrics collection           |
-| Grafana         | Visualization and dashboards |
-| Loki            | Centralized log aggregation  |
-| Grafana Alloy   | Log collection agent (replaced deprecated Promtail) |
-| cAdvisor        | Container metrics exporter   |
-| Node Exporter   | Host system metrics exporter |
-| MongoDB         | Application database         |
-| Nginx           | Reverse proxy                |
-| React Frontend  | Frontend application         |
-| Node.js Backend | Backend API                  |
-
----
-
-# Monitoring Architecture
+## Architecture
 
 ```plaintext
-Docker Containers
-        ↓
-     cAdvisor
-        ↓
-   Prometheus
-        ↓
-     Grafana
+Browser
+   ↓
+nginx (NodePort :31252)
+   ├── /weather/* → backend:5000 → Open-Meteo API
+   └── /          → frontend:3000
 
-Docker Logs
-        ↓
-  Grafana Alloy
-        ↓
-       Loki
-        ↓
-     Grafana
+backend → MongoDB (StatefulSet)
 
+Monitoring:
+  cAdvisor (DaemonSet) → Prometheus → Grafana
+  Node Exporter (DaemonSet) → Prometheus → Grafana
+  Alloy (DaemonSet) → Loki → Grafana
 ```
 
 ---
 
-# Implemented Monitoring Features
+## Tech Stack
 
-## 1. Container Monitoring Dashboard
-
-Implemented custom Grafana dashboard for:
-
-* Container CPU utilization
-* Container Memory utilization
-* CPU core usage
-* Memory usage in MiB
-* CPU percentage usage
-* Container-wise filtering
-* Real-time monitoring
-
-Implemented Grafana variables using:
-
-* `container_label_com_docker_compose_service`
-* `container_name_clean`
-
-Used PromQL queries for:
-
-* CPU usage percentage
-* Memory usage percentage
-* Total CPU usage
-* Available CPU
-* Container-wise metrics
-
-  <img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/60900d04-79e0-4916-aeee-8ee8dd9daf37" />
+| Component        | Tool / Image                        | Purpose                          |
+|------------------|-------------------------------------|----------------------------------|
+| Frontend         | React (samarthfunde45/weather-frontend) | Weather search UI             |
+| Backend          | Node.js (samarthfunde45/weather-backend) | REST API + Prometheus metrics |
+| Database         | MongoDB 6                           | Weather search history           |
+| Reverse Proxy    | Nginx 1.29.8                        | Routes frontend + backend        |
+| Metrics          | Prometheus v3.5.3                   | Metrics scraping and storage     |
+| Dashboards       | Grafana 13.0.1                      | Visualization and alerting       |
+| Log Aggregation  | Loki 3.7.2                          | Centralized log storage          |
+| Log Collection   | Grafana Alloy v1.16.1               | Pod log shipping to Loki         |
+| Container Metrics| cAdvisor v0.51.0                    | Container CPU/memory metrics     |
+| Host Metrics     | Node Exporter                       | Node CPU/memory/disk metrics     |
+| Orchestration    | Kubernetes (Minikube)               | Container orchestration          |
 
 ---
 
-# 2. Node Exporter Dashboard
+## Namespaces
 
-Integrated Node Exporter for host-level monitoring.
-
-Monitored:
-
-* Total CPU usage
-* Memory usage
-* Disk utilization
-* Network traffic
-* System load
-* System uptime
-
-Used official Grafana Node Exporter dashboard.
-
-<img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/0f9f0aef-9f73-4622-af1a-a1bc1ac24faa" />
-
+| Namespace           | Contents                                            |
+|---------------------|-----------------------------------------------------|
+| `weather-app`       | backend, frontend, mongo, nginx                     |
+| `weather-monitoring`| prometheus, grafana, loki, alloy, cadvisor, node-exporter |
 
 ---
 
-# 3. Centralized Logging Dashboard
-
-Integrated Loki + Promtail for centralized logging.
-
-Implemented:
-
-* Container-wise log filtering
-* Dynamic container variables
-* Real-time log streaming
-* Docker log aggregation
-* Log querying in Grafana
-
-Used labels:
-
-* `container_name`
-* `container_name_clean`
-* `job="docker"`
-
- <img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/1bf1044f-caad-4a02-b0f1-58833e2636df" />
-
-
----
-
-# 4. SMTP Email Configuration
-
-Configured Grafana SMTP using Gmail SMTP server for:
-
-* User invitations
-* Email notifications
-* Dashboard sharing
-
-Configured:
-
-* SMTP host
-* SMTP authentication
-* Root URL
-* Domain configuration
-
----
-
-# 5. Multi-User Grafana Access
-
-Implemented:
-
-* Viewer role access
-* Dashboard permissions
-* User invitation system
-* Organization access management
-
-  <img width="1266" height="683" alt="image" src="https://github.com/user-attachments/assets/4e1c18fd-f3e5-4bc3-ac6e-03b961d0d9d1" />
-
-  ---
-  
-  <img width="1286" height="349" alt="image" src="https://github.com/user-attachments/assets/71bd36ee-9107-464c-b721-9dbdec883f33" />
-
-  ---
-
-  <img width="1286" height="364" alt="image" src="https://github.com/user-attachments/assets/a787ec1d-6e91-458b-bce6-b1c5f2944269" />
-
-  ---
-
-  <img width="1286" height="491" alt="image" src="https://github.com/user-attachments/assets/2347a2e1-6085-4651-affc-e74c29c1bcc5" />
-
-
----
-
-# 6. Docker Resource Limits
-
-Configured memory limits for containers using:
-
-```yaml
-mem_limit: 512m
-```
-
-Monitored actual container resource utilization using Docker metrics.
-
----
-
-# 7. Custom Grafana Variables
-
-Implemented dynamic Grafana variables for:
-
-* Container selection
-* Logs filtering
-* CPU filtering
-* Memory filtering
-
-Used:
-
-```promql
-label_values(container_memory_usage_bytes, container_label_com_docker_compose_service)
-```
-
-<img width="1010" height="314" alt="image" src="https://github.com/user-attachments/assets/c77a7a78-93e2-419c-8a4c-9ef8c623122a" />
-
-
----
-
-# 8. CPU Monitoring Queries
-
-Implemented:
-
-* Container CPU percentage
-* Total CPU usage
-* Available CPU percentage
-
-Used PromQL queries with:
-
-* `container_cpu_usage_seconds_total`
-* `rate()`
-* `sum()`
-* `count()`
-  
-* Container Wise CPU usage: `sum(rate(container_cpu_usage_seconds_total{
-                                      container_label_com_docker_compose_service=~"$container"
-                                     }[1m])) * 100`
-
----
-
-# 9. Memory Monitoring Queries
-
-Implemented:
-
-* Container memory usage in MiB
-* Memory percentage utilization
-
-Used:
-
-* `container_memory_usage_bytes`
-* `container_spec_memory_limit_bytes`
-
-* Container Wise Memory Usage: `(
-                                container_memory_working_set_bytes{container_label_com_docker_compose_service=~"$container"}
-                                /
-                                container_spec_memory_limit_bytes{container_label_com_docker_compose_service=~"$container"}
-                                ) * 100`
-
----
-
-# 10. Docker Compose Monitoring Stack
-
-Integrated services:
-
-* Backend
-* Frontend
-* MongoDB
-* Nginx
-* Prometheus
-* Grafana
-* Loki
-* Grafana Alloy (replaced Promtail)
-* cAdvisor
-* Node Exporter
-
----
-
-
-# 11. Grafana Provisioning and Dashboard Backup Automation
-
-Implemented Grafana provisioning for:
-
-* Automatic datasource creation
-* Automatic dashboard restoration
-* Automatic alert provisioning
-* Persistent monitoring configuration
-* Dashboard backup using Grafana HTTP API
-* Infrastructure-as-Code approach
-
-This implementation ensures that after deleting Grafana volumes and restarting containers, all dashboards, datasources, and alerts are recreated automatically.
-
----
-
-# Provisioning Folder Structure
+## Folder Structure
 
 ```plaintext
-grafana/
-├── dashboards/
-│   ├── container-monitoring.json
-│   ├── logs-dashboard.json
-│   └── node-exporter.json
+k8s/
+├── namespace.yml                        ← Creates both namespaces
 │
-└── provisioning/
-    ├── dashboards/
-    │   └── dashboard.yml
-    │
-    ├── datasources/
-    │   └── datasource.yml
-    │
-    └── alerting/
-        ├── alert-rules.yaml
-        └── contact-points.yaml
-        └── notification-policies.yaml
+├── app/
+│   ├── backend-deployment.yml
+│   ├── backend-service.yml
+│   ├── frontend-deployment.yml
+│   ├── frontend-service.yml
+│   ├── mongo-statefulset.yml
+│   ├── mongo-pvc.yml
+│   ├── mongo-service.yml
+│   ├── nginx-deployment.yml
+│   ├── nginx-service.yml
+│   └── ingress.yml
+│
+├── monitoring/
+│   ├── prometheus-deployment.yml
+│   ├── prometheus-service.yml
+│   ├── prometheus-pvc.yml
+│   ├── prometheus-rbac.yml
+│   ├── grafana-deployment.yml
+│   ├── grafana-service.yml
+│   ├── grafana-pvc.yml
+│   ├── loki-deployment.yml
+│   ├── loki-service.yml
+│   ├── loki-pvc.yml
+│   ├── alloy-daemonset.yml
+│   ├── alloy-rbac.yml
+│   ├── cadvisor-daemonset.yml
+│   ├── cadvisor-service.yml
+│   ├── node-exporter-daemonset.yml
+│   ├── node-exporter-service.yml
+│   └── ingress.yml
+│
+├── configmaps/
+│   ├── prometheus-config.yml
+│   ├── nginx-config.yml
+│   ├── loki-config.yml
+│   ├── alloy-config.yml
+│   ├── grafana-datasources.yml
+│   ├── grafana-dashboards-config.yml
+│   ├── grafana-dashboards.yml
+│   ├── grafana-dashboard-node.yml
+│   ├── grafana-alerting.yml
+│   ├── grafana-email-template.yml
+│   └── grafana-user-setup.yml
+│
+└── secrets/
+    ├── app-secrets.yml                  ← MongoDB credentials
+    └── grafana-secrets.yml              ← Grafana admin + SMTP password
 ```
 
 ---
 
-# Dashboard Provisioning Configuration
+## Prerequisites
 
-Created:
-
-```yaml
-grafana/provisioning/dashboards/dashboard.yml
-```
-
-```yaml
-apiVersion: 1
-
-providers:
-  - name: Infrastructure
-    orgId: 1
-    folder: Infrastructure
-    type: file
-    disableDeletion: false
-    editable: true
-    updateIntervalSeconds: 10
-
-    options:
-      path: /etc/grafana/provisioning/dashboards/json
-```
-
-This configuration automatically loads all dashboard JSON files from:
-
-```plaintext
-/etc/grafana/provisioning/dashboards/json
-```
-
-inside the Grafana container.
+- Docker Desktop installed and running
+- Minikube installed
+- kubectl installed
+- Images already built in Minikube's Docker context (see Build Images section)
 
 ---
 
-# Datasource Provisioning
-
-Created:
-
-```yaml
-grafana/provisioning/datasources/datasource.yml
-```
-
-```yaml
-apiVersion: 1
-
-datasources:
-  - name: Prometheus
-    uid: prometheus
-    type: prometheus
-    access: proxy
-    url: ${PROMETHEUS_URL}
-    isDefault: true
-
-  - name: Loki
-    uid: loki
-    type: loki
-    access: proxy
-    url: ${LOKI_URL}
-```
-
-Configured datasource URLs using environment variables.
-
----
-
-# Environment Variable Configuration
-
-Configured application, MongoDB, Grafana SMTP, and datasource variables using:
-
-```plaintext
-.env
-```
-
-## Required Environment Variables
-
-```env
-# MongoDB
-MONGO_USER=
-MONGO_PASS=
-MONGO_HOST=
-MONGO_PORT=
-MONGO_DB=
-MONGO_AUTH_DB=
-
-# Grafana Admin
-GRAFANA_ADMIN_USER=
-GRAFANA_ADMIN_PASSWORD=
-
-# Grafana SMTP
-GF_SMTP_ENABLED=
-GF_SMTP_HOST=
-GF_SMTP_USER=
-GF_SMTP_PASSWORD=
-GF_SMTP_FROM_ADDRESS=
-GF_SERVER_ROOT_URL=
-GF_SERVER_DOMAIN=
-GF_SMTP_FROM_NAME=
-GF_SMTP_SKIP_VERIFY=
-
-# Grafana Datasources
-PROMETHEUS_URL=
-LOKI_URL=
-```
----
-
-# Docker Compose Configuration for Grafana
-
-Configured Grafana volumes and provisioning mount points:
-
-```yaml
-grafana:
-  image: grafana/grafana
-  container_name: grafana
-
-  ports:
-    - "3001:3000"
-
-  env_file:
-    - .env
-
-  environment:
-    - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
-    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-
-    # SMTP SETTINGS
-    - GF_SMTP_ENABLED=${GF_SMTP_ENABLED}
-    - GF_SMTP_HOST=${GF_SMTP_HOST}
-    - GF_SMTP_USER=${GF_SMTP_USER}
-    - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
-    - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
-    - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL}
-    - GF_SERVER_DOMAIN=${GF_SERVER_DOMAIN}
-    - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME}
-    - GF_SMTP_SKIP_VERIFY=${GF_SMTP_SKIP_VERIFY}
-
-  restart: always
-
-  mem_limit: 512m
-
-  volumes:
-    - grafana_data:/var/lib/grafana
-    - ./grafana/provisioning:/etc/grafana/provisioning
-    - ./grafana/dashboards:/etc/grafana/provisioning/dashboards/json
-```
-
----
-
-# Dashboard Backup Process
-
-Implemented dashboard backup using Grafana HTTP API and `jq`.
-
-Exported dashboards directly from Grafana using dashboard UID.
-
----
-
-## Export Container Monitoring Dashboard
+## Step 1 — Start Minikube
 
 ```bash
-curl -s -u admin:samarth \
-http://localhost:3001/api/dashboards/uid/adnbqw4 \
-| jq '.dashboard | .id=null | .version=null' \
-> grafana/dashboards/container-monitoring.json
+minikube start --driver=docker --cpus=4 --memory=6144
 ```
 
----
-
-## Export Logs Dashboard
+Verify it is running:
 
 ```bash
-curl -s -u admin:samarth \
-http://localhost:3001/api/dashboards/uid/ad8brcf \
-| jq '.dashboard | .id=null | .version=null' \
-> grafana/dashboards/logs-dashboard.json
+minikube status
+kubectl get nodes
 ```
 
 ---
 
-## Export Node Exporter Dashboard
+## Step 2 — Build Docker Images Inside Minikube
+
+Since `imagePullPolicy: Never` is used, images must be built directly inside Minikube's Docker daemon (no registry push needed).
 
 ```bash
-curl -s -u admin:samarth \
-http://localhost:3001/api/dashboards/uid/rYdddlPWk \
-| jq '.dashboard | .id=null | .version=null' \
-> grafana/dashboards/node-exporter.json
+# Point your shell to Minikube's Docker daemon
+eval $(minikube docker-env)
+
+# Build backend image
+docker build -t samarthfunde45/weather-backend:latest ./backend
+
+# Build frontend image
+docker build -t samarthfunde45/weather-frontend:latest ./frontend
 ```
 
----
-
-# JSON Validation
-
-Validated exported dashboard JSON files using:
+Verify images are available:
 
 ```bash
-jq . grafana/dashboards/container-monitoring.json
+docker images | grep samarthfunde45
 ```
-
-If no error appears, the dashboard JSON is valid.
 
 ---
 
-# Alerting System Implementation
+## Step 3 — Create Namespaces
 
-Implemented Grafana alert provisioning for:
+```bash
+kubectl apply -f k8s/namespace.yml
+```
 
-* CPU alerts
-* Memory alerts
-* Disk usage alerts
-* Container down alerts
-* Container-wise CPU alerts
-* Container-wise memory alerts
+Verify:
 
-Created:
+```bash
+kubectl get namespaces | grep weather
+```
+
+---
+
+## Step 4 — Apply Secrets
+
+Edit the secret files with your values before applying. Secrets must be base64 encoded.
+
+Encode a value:
+
+```bash
+echo -n "your-value" | base64
+```
+
+Apply:
+
+```bash
+kubectl apply -f k8s/secrets/app-secrets.yml
+kubectl apply -f k8s/secrets/grafana-secrets.yml
+```
+
+---
+
+## Step 5 — Apply ConfigMaps
+
+```bash
+kubectl apply -f k8s/configmaps/
+```
+
+This applies all ConfigMaps at once: Prometheus config, Nginx config, Loki config, Alloy config, and all Grafana provisioning configs.
+
+---
+
+## Step 6 — Deploy the Application Stack
+
+```bash
+kubectl apply -f k8s/app/
+```
+
+Wait for all pods to be running:
+
+```bash
+kubectl get pods -n weather-app -w
+```
+
+Expected output:
+
+```
+NAME                        READY   STATUS    RESTARTS
+backend-xxx                 1/1     Running   0
+frontend-xxx                1/1     Running   0
+mongo-0                     1/1     Running   0
+nginx-xxx                   1/1     Running   0
+```
+
+---
+
+## Step 7 — Deploy the Monitoring Stack
+
+```bash
+kubectl apply -f k8s/monitoring/
+```
+
+Wait for all monitoring pods:
+
+```bash
+kubectl get pods -n weather-monitoring -w
+```
+
+Expected output:
+
+```
+NAME                        READY   STATUS    RESTARTS
+alloy-xxx                   1/1     Running   0
+cadvisor-xxx                1/1     Running   0
+grafana-xxx                 1/1     Running   0
+loki-xxx                    1/1     Running   0
+node-exporter-xxx           1/1     Running   0
+prometheus-xxx              1/1     Running   0
+```
+
+---
+
+## Step 8 — Access the Application
+
+Get the Minikube IP:
+
+```bash
+minikube ip
+```
+
+The Nginx service is exposed as NodePort on port `31252`:
+
+```
+http://<minikube-ip>:31252
+```
+
+Example: `http://192.168.49.2:31252`
+
+---
+
+## Step 9 — Access Grafana
+
+Get the Grafana NodePort:
+
+```bash
+kubectl get svc grafana -n weather-monitoring
+```
+
+Or use Minikube's tunnel:
+
+```bash
+minikube service grafana -n weather-monitoring
+```
+
+Default credentials: `admin / admin`
+
+---
+
+## Resource Limits
+
+| Container     | Memory Request | Memory Limit | CPU Request | CPU Limit |
+|---------------|---------------|-------------|-------------|-----------|
+| backend       | 256Mi         | 512Mi       | 250m        | 500m      |
+| frontend      | 512Mi         | 1Gi         | 250m        | 500m      |
+| mongo         | 256Mi         | 512Mi       | 250m        | 500m      |
+| nginx         | 64Mi          | 128Mi       | 100m        | 200m      |
+| prometheus    | 256Mi         | 512Mi       | 250m        | 500m      |
+| grafana       | 256Mi         | 512Mi       | 250m        | 500m      |
+| loki          | 256Mi         | 512Mi       | 250m        | 500m      |
+| alloy         | 128Mi         | 512Mi       | 100m        | 300m      |
+| cadvisor      | 256Mi         | 512Mi       | 250m        | 500m      |
+
+---
+
+## Key Implementation Details
+
+### Nginx — Reverse Proxy via ConfigMap
+
+Nginx is configured via a ConfigMap mounted at `/etc/nginx/conf.d/default.conf`. This routes:
+- `/weather/*` → `backend.weather-app.svc.cluster.local:5000`
+- `/` → `frontend.weather-app.svc.cluster.local:3000`
 
 ```yaml
-grafana/provisioning/alerting/alert-rules.yaml
+# k8s/configmaps/nginx-config.yml
+location /weather/ {
+    proxy_pass http://backend.weather-app.svc.cluster.local:5000;
+}
+location / {
+    proxy_pass http://frontend.weather-app.svc.cluster.local:3000;
+}
 ```
 
-Implemented PromQL-based alert rules.
+### cAdvisor — Container Metrics
+
+cAdvisor v0.51.0 is required (not v0.49.x). Docker 29.x requires Docker API v1.44 minimum. v0.49.x only supports API v1.41 and fails to register the Docker factory.
+
+```yaml
+image: gcr.io/cadvisor/cadvisor:v0.51.0
+args:
+  - --store_container_labels=false
+  - --whitelisted_container_labels=io.kubernetes.container.name,io.kubernetes.pod.name,io.kubernetes.pod.namespace
+```
+
+Docker socket and containerd socket are mounted so cAdvisor can read Kubernetes container labels.
+
+Prometheus relabels the `container_label_io_kubernetes_*` labels into clean `container`, `pod`, `namespace` labels:
+
+```yaml
+metric_relabel_configs:
+  - source_labels: [container_label_io_kubernetes_container_name]
+    regex: (.+)
+    target_label: container
+    replacement: $1
+  - source_labels: [container_label_io_kubernetes_pod_name]
+    regex: (.+)
+    target_label: pod
+    replacement: $1
+  - source_labels: [container_label_io_kubernetes_pod_namespace]
+    regex: (.+)
+    target_label: namespace
+    replacement: $1
+```
+
+### Prometheus — No Lock File
+
+Prometheus uses `strategy: Recreate` and `--storage.tsdb.no-lockfile` because Minikube uses the Docker driver with overlayfs, which does not support file locking.
+
+```yaml
+strategy:
+  type: Recreate
+args:
+  - --storage.tsdb.no-lockfile
+```
+
+### Grafana Alloy — Kubernetes Log Collection
+
+Alloy uses `loki.source.kubernetes` (not `loki.source.file`) to collect pod logs. The file-based source fails in Kubernetes because Go's `stat()` does not expand glob patterns on filesystem paths like `/var/log/pods/*uuid*/container/*.log`.
+
+`loki.source.kubernetes` uses the Kubernetes API directly to stream logs from all pods.
+
+Alloy RBAC requires `pods/log` permission:
+
+```yaml
+resources: ["pods", "pods/log", "nodes", "namespaces", "endpoints"]
+verbs: ["get", "list", "watch"]
+```
+
+Alloy must also bind to `0.0.0.0` (not `127.0.0.1`) for liveness/readiness probes to work:
+
+```yaml
+args:
+  - run
+  - /etc/alloy/config.alloy
+  - --server.http.listen-addr=0.0.0.0:12345
+```
+
+### Grafana — Auto-Provisioned via ConfigMaps
+
+All Grafana configuration is provisioned at startup through mounted ConfigMaps:
+
+| ConfigMap                    | Mounted at                                    |
+|------------------------------|-----------------------------------------------|
+| grafana-datasources          | `/etc/grafana/provisioning/datasources`       |
+| grafana-dashboards-config    | `/etc/grafana/provisioning/dashboards`        |
+| grafana-alerting             | `/etc/grafana/provisioning/alerting`          |
+| grafana-dashboards           | `/var/lib/grafana/dashboards/`                |
+| grafana-dashboard-node       | `/var/lib/grafana/dashboards/node-exporter.json` |
+| grafana-email-template       | Custom HTML email template for alerts         |
+| grafana-user-setup           | `/scripts/grafana-user-setup.sh`              |
 
 ---
 
-# Configured Alert Queries
+## Grafana Dashboards
 
-## CPU Usage Alert
+### 1. Container Monitoring Dashboard
 
+Monitors all containers in `weather-app` and `weather-monitoring` namespaces.
+
+Panels:
+- Container CPU Usage % (gauge)
+- Container Memory Usage % (gauge)
+- Container Memory Usage in MB (time series)
+- Container Wise Memory Utilization — Used / Limit / Remaining (bar gauge)
+- Container wise Used CPU & Remaining CPU (bar gauge)
+
+Variable:
 ```promql
-100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
-```
-
----
-
-## Container Down Alert
-
-```promql
-time() - container_last_seen{name!=""} > 30
-```
-
----
-
-## Container Wise CPU Alert
-
-```promql
-sum(rate(container_cpu_usage_seconds_total{name!=""}[1m])) by (name) * 100
-```
-
----
-
-## Container Wise Memory Alert
-
-```promql
-(
-container_memory_usage_bytes{name!=""}
-/
-container_spec_memory_limit_bytes{name!=""}
-) * 100
-```
-
----
-
-## Disk Usage Alert
-
-```promql
-100 - (
-(node_filesystem_avail_bytes{mountpoint="/"} * 100)
-/
-node_filesystem_size_bytes{mountpoint="/"}
+label_values(
+  container_cpu_usage_seconds_total{
+    container!="",container!="POD",
+    namespace=~"weather-app|weather-monitoring"
+  },
+  container
 )
 ```
 
----
-
-## Memory Usage Alert
+Key PromQL queries:
 
 ```promql
-(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+# Memory usage % of container limit
+(
+  container_memory_working_set_bytes{container=~"$container",...}
+  /
+  container_spec_memory_limit_bytes{container=~"$container",...}
+) * 100
+
+# CPU usage %
+rate(container_cpu_usage_seconds_total{container=~"$container",...,cpu="total"}[2m]) * 100
+
+# Remaining CPU %
+100 - (
+  sum(rate(container_cpu_usage_seconds_total{...,cpu="total"}[2m]))
+  / count(node_cpu_seconds_total{mode="idle"})
+) * 100
 ```
 
----
+> `cpu="total"` filter is required — cAdvisor exposes per-core and total CPU counters. Without this filter, values are multiplied by the number of cores.
 
-# Contact Point Configuration
+> `[2m]` window is used instead of `[1m]` — `rate()` requires at least 2 data points within the window. Newly scraped series may not have enough points in a 1-minute window.
 
-Created:
+### 2. Node Exporter Dashboard
 
-```yaml
-grafana/provisioning/alerting/contact-points.yaml
-```
+Standard Grafana Node Exporter dashboard (ID: `1860`) monitoring host CPU, memory, disk, and network.
 
-```yaml
-apiVersion: 1
+### 3. Logs Dashboard
 
-contactPoints:
-  - orgId: 1
-    name: email-alert
+Real-time pod log streaming from Loki.
 
-    receivers:
-      - uid: email1
-        type: email
-
-        settings:
-          addresses: ${GMAIL}
-```
-
-Configured Gmail SMTP notifications for Grafana alerts.
-
----
-
-<img width="1291" height="689" alt="image" src="https://github.com/user-attachments/assets/876980ba-128b-4c48-bc8f-1126127e11ef" />
-
----
-
-# Dashboard Recovery Testing
-
-Tested complete monitoring stack recovery using:
-
-```bash
-docker-compose down -v
-docker-compose up -d
-```
-
-Verified automatic restoration of:
-
-* Dashboards
-* Datasources
-* Alert rules
-* Contact points
-* Folder structure
-* Monitoring configurations
-
-without manual recreation.
-
----
-
-# Volume Backup Process
-
-Created Grafana volume backup using tar archive.
-
-## Backup Grafana Volume
-
-```bash
-docker run --rm \
--v grafana_data:/source \
--v $(pwd):/backup \
-alpine \
-tar czf /backup/grafana-backup.tar.gz -C /source .
-```
-
----
-
-## Restore Grafana Volume
-
-```bash
-docker run --rm \
--v grafana_data:/target \
--v $(pwd):/backup \
-alpine \
-sh -c "cd /target && tar xzf /backup/grafana-backup.tar.gz"
-```
-
-This backup preserves:
-
-* Dashboards
-* Users
-* Alert history
-* Organizations
-* Grafana database
-* Settings
-
----
-
-# Container Monitoring Dashboard Features
-
-Implemented:
-
-* Container-wise CPU monitoring
-* Container-wise memory monitoring
-* Total CPU utilization
-* Remaining CPU
-* Total memory usage
-* Available memory
-* Container filtering
-
-Used Grafana variables:
-
-```promql
-label_values(container_memory_usage_bytes,container_label_com_docker_compose_service)
-```
-
----
-
-# Logging Dashboard Features
-
-Implemented centralized logging using Loki and Promtail.
-
-Used variable query:
-
+Variable:
 ```logql
-{job="docker"}
+label_values({namespace=~".+"}, container)
 ```
 
-Used panel query:
-
+Panel query:
 ```logql
-{job="docker", container_name_clean="$container"}
-```
-
-Implemented:
-
-* Dynamic container selection
-* Real-time log streaming
-* Container-wise log filtering
-
----
-
-# Infrastructure Monitoring Components
-
-Integrated:
-
-* Prometheus
-* Grafana
-* Loki
-* Grafana Alloy (replaced Promtail)
-* cAdvisor
-* Node Exporter
-
-Monitored:
-
-* Docker containers
-* Host machine resources
-* Container logs
-* System metrics
-* Resource utilization
-
----
-
-
-# Key Learnings
-
-This project helped in understanding:
-
-* Docker monitoring and container observability
-* Prometheus metrics collection
-* PromQL query writing and optimization
-* Grafana dashboard creation and visualization
-* Loki centralized log aggregation
-* Promtail log shipping
-* cAdvisor container metrics monitoring
-* Node Exporter host-level monitoring
-* Docker resource management
-* Grafana SMTP configuration
-* Multi-user Grafana access management
-* Grafana alerting system
-* Grafana provisioning automation
-* Dashboard backup and restoration
-* Grafana dashboard JSON structure
-* Infrastructure-as-Code concepts
-* Docker volume backup and recovery
-* Grafana HTTP API usage
-* jq command usage for JSON processing
-* End-to-end monitoring architecture design
-
----
-
-
-# Final Outcome
-
-Successfully built a production-style Docker monitoring and observability stack with:
-
-* Metrics monitoring
-* Centralized logging
-* Alerting system
-* Email notifications
-* Dashboard provisioning
-* Backup and recovery
-* Multi-container monitoring
-* Infrastructure automation
-
-The monitoring stack is now capable of fully restoring dashboards, datasources, and alerts automatically after container or volume deletion.
-
-
-
-
----
-
-# 12. Advanced Grafana Alerting System
-
-Implemented a fully provisioned, production-grade alerting system with:
-
-* Separate firing and resolved emails (never mixed in the same email)
-* Dynamic container filtering using Docker Compose labels
-* Modern HTML email template with colored headers and status badges
-* Custom email subjects per alert category
-* Continuous repeat alerts while issue persists
-* Automatic email on container recovery
-
----
-
-## Alerting Architecture
-
-```plaintext
-Prometheus (metrics)
-        ↓
-Grafana Alert Rules (evaluate every 5m)
-        ↓
-Notification Policy (group + route)
-        ↓
-Contact Points (email)
-        ↓
-Gmail SMTP → Email
+{container=~"$container"}
 ```
 
 ---
 
-## Provisioning File Structure
+## Alerting System
 
-```plaintext
-grafana/
-├── ng_alert_notification.html          ← Custom email HTML template
-└── provisioning/
-    └── alerting/
-        ├── container-alerts.yml        ← App container alert rules
-        ├── monitoring-alerts.yml       ← Monitoring container alert rules
-        ├── infrastructure-alerts.yml   ← Host CPU / Memory / Disk rules
-        ├── contact-points.yaml         ← Email contact points
-        ├── notification-policies.yaml  ← Routing and grouping rules
-        └── templates.yml               ← Email subject templates
-```
+Grafana alerts are provisioned via `k8s/configmaps/grafana-alerting.yml` using the Grafana alerting API format.
 
----
+### Alert Rules
 
-## Alert Rules Overview
-
-### Container Alerts (`container-alerts.yml`)
-
-Filtered dynamically using Docker label `app_role=application` — covers: **backend, frontend, mongo, nginx**
-
-| Alert | Group | Interval | Trigger | Threshold | Email Heading |
-|---|---|---|---|---|---|
-| Container Down Alert | Container Alerts | 5m | Container not seen | > 120s for 1m | `🚨 Container Down Alert` |
-| Container Start Alert | Container Start Alerts | 1m | Container running after being down | seen < 90s AND was down > 120s | `✅ Container Start Alert` |
-| Container Wise CPU Alert | Container Alerts | 5m | Container CPU usage | > 80% for 5m | `🚨 Container Wise CPU Alert` |
-| Container Wise Memory Alert | Container Alerts | 5m | Container memory usage | > 80% for 5m | `🚨 Container Wise Memory Alert` |
-
-### Monitoring Container Alerts (`monitoring-alerts.yml`)
-
-Filtered using label `app_role=monitoring` — covers: **prometheus, cadvisor, node-exporter, loki, alloy**
-
-| Alert | Trigger | Threshold |
-|---|---|---|
-| Monitoring Container Down Alert | Container not seen | > 120s for 1m |
-| Monitoring Container CPU Alert | Container CPU usage | > 80% for 5m |
-| Monitoring Container Memory Alert | Container memory usage | > 80% for 5m |
-
-> **Note:** If Prometheus itself goes down, no alerts can fire (it is the metrics engine). Use an external monitor (e.g. UptimeRobot) for `http://your-ip:9090/-/healthy`
-
-### Infrastructure Alerts (`infrastructure-alerts.yml`)
-
-Host-level metrics from Node Exporter
-
-| Alert | Trigger | Threshold |
-|---|---|---|
+| Alert | Condition | Threshold |
+|-------|-----------|-----------|
+| Container Down Alert | Container not seen | > 120s |
+| Container Start Alert | Container running after being down | within 90s |
+| Container Wise CPU Alert | Container CPU usage | > 80% for 5m |
+| Container Wise Memory Alert | Container memory usage | > 80% for 5m |
+| Monitoring Container Down Alert | Monitoring pod not seen | > 120s |
 | CPU Alert | Host CPU usage | > 80% for 5m |
 | Memory Usage Alert | Host RAM usage | > 80% for 5m |
 | Disk Usage Alert | Disk usage at `/` | > 80% for 5m |
 
----
+### Alert Email Behavior
 
-## Email Behavior
+- Firing and resolved emails are never mixed in the same email
+- Multiple containers down in the same evaluation window → one grouped email
+- Continuous repeat emails while an alert is still firing
+- Custom HTML email template with colored headers (red for firing, green for resolved)
 
-| Behavior | Detail |
-|---|---|
-| Firing and resolved NEVER mixed | Separate contact points per alert type |
-| Multiple containers down | ONE grouped email listing all |
-| Single container starts | Immediate individual email |
-| Multiple containers start (same time) | ONE grouped email |
-| Continuous firing | Email repeats every 5 minutes while still down |
-| Container Start Alert | Fires once per recovery event |
-| No "Grouped by" header | Removed from HTML template |
-| View Alert + Silence buttons | Working, links to Grafana |
-| Email header color | 🔴 Red for firing, 🟢 Green for start/resolved |
+### SMTP Configuration
 
----
-
-## PromQL Queries Used
-
-### Container Down Detection
-```promql
-min by (container) (
-  label_replace(
-    time() - max_over_time(
-      container_last_seen{container_label_app_role="application"}[24h]
-    ),
-    "container", "$1",
-    "container_label_com_docker_compose_service", "(.*)"
-  )
-)
-```
-Threshold: `> 120` seconds
-
-### Container Start Detection
-```promql
-min by (container) (
-  label_replace(
-    time() - container_last_seen{container_label_app_role="application"},
-    "container", "$1",
-    "container_label_com_docker_compose_service", "(.*)"
-  )
-)
-and on(container) (
-  max_over_time(
-    min by (container) (
-      label_replace(
-        time() - container_last_seen{container_label_app_role="application"},
-        "container", "$1",
-        "container_label_com_docker_compose_service", "(.*)"
-      )
-    )[10m:30s]
-  ) > 120
-)
-```
-Threshold: `< 90` seconds (separate 1m evaluation group — catches container within 60s of startup)
-
-### Container CPU
-```promql
-max by (container) (
-  label_replace(
-    sum by (container_label_com_docker_compose_service) (
-      rate(container_cpu_usage_seconds_total{container_label_app_role="application"}[5m])
-    ) * 100,
-    "container", "$1",
-    "container_label_com_docker_compose_service", "(.*)"
-  )
-)
-```
-Threshold: `> 80` %
-
-### Container Memory
-```promql
-max by (container) (
-  label_replace(
-    (
-      container_memory_usage_bytes{container_label_app_role="application"}
-      /
-      container_spec_memory_limit_bytes{container_label_app_role="application"}
-    ) * 100,
-    "container", "$1",
-    "container_label_com_docker_compose_service", "(.*)"
-  )
-)
-```
-Threshold: `> 80` %
-
----
-
-## Complete Alert Scenarios
-
-### Scenario 1 — Single Container Down + Start
-
-```
-Container stops
-      ↓  (~5–10 min)
-🚨 Email: "Container Down Alert — frontend"
-      ↓  (every 5 min while still down)
-🚨 Repeat email: "Container Down Alert — frontend"
-      ↓
-Container starts
-      ↓  (~5 min)
-✅ Email: "Container Start Alert — frontend"
-```
-
-
-
-<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/5f93b349-155c-47ef-a5cc-117e8b86ad46" />
-
-<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/646b59d9-30c5-4b28-8968-225bc5941e66" />
-
-
----
-
-### Scenario 2 — Multiple Containers Down (grouped)
-
-```
-frontend stops + nginx stops (within same eval window)
-      ↓  (~5–10 min)
-🚨 ONE email: "Container Down Alert — frontend, nginx"
-      ↓
-Both start
-      ↓  (~5 min)
-✅ ONE email: "Container Start Alert — frontend, nginx"
-```
-
-
-<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/9931b0a2-caff-4957-849f-c14c138811b9" />
-
-<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/44f358c1-59c3-469c-8ec9-59105dca8738" />
-
-
----
-
-### Scenario 3 — Container CPU High
-
-```
-CPU usage crosses 80% and stays for 5 minutes
-      ↓
-🚨 Email: "Container Wise CPU Alert — backend"
-      ↓
-CPU drops below 80%
-      ↓
-✅ Resolved email
-```
-
-<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/e0437578-2fa7-4dbd-be62-fab1aa9ef797" />
-
-<img width="1284" height="635" alt="image" src="https://github.com/user-attachments/assets/9cac2297-2bb8-421c-aa87-19ce27a420f9" />
-
-
----
-
-### Scenario 4 — Container Memory High
-
-```
-Memory usage crosses 80% for 5 minutes
-      ↓
-🚨 Email: "Container Wise Memory Alert — mongo"
-```
-
-Testing:
-
-sudo apt update
-sudo apt install stress -y
-
-docker exec -it weather-forecast-app-frontend-1 bash
-
-apt update && apt install stress -y
-
-stress --vm 1 --vm-bytes 450M --timeout 300s
-
-<img width="1283" height="644" alt="image" src="https://github.com/user-attachments/assets/401e1cbd-8c49-45bd-a0ab-f0a4d7a156cc" />
-
-
----
-
-### Scenario 5 — Monitoring Container Down
-
-```
-cadvisor stops
-      ↓  (~5–10 min)
-🚨 Email: "Monitoring Container Down Alert — cadvisor"
-```
-
-
----
-
-### Scenario 6 — Host Infrastructure Alert
-
-```
-Host CPU/Memory/Disk crosses 80% for 5 minutes
-      ↓
-🚨 Email: "[CRITICAL] CPU Alert"
-🚨 Email: "[CRITICAL] Memory Usage Alert"
-🚨 Email: "[CRITICAL] Disk Usage Alert"
-```
-
----
-
-## Testing Guide
-
-### Speed Up Testing (reduce wait time from 10 min → 2 min)
-
-
-**`container-alerts.yml`** and **`monitoring-alerts.yml`**:
-```yaml
-interval: 1m        # change from 5m
-for: 30s            # change from 1m or 5m
-```
-
-**`notification-policies.yaml`** (all routes):
-```yaml
-group_wait: 10s       # change from 30s
-group_interval: 1m    # change from 5m
-repeat_interval: 1m   # change from 5m or 24h
-```
-
-Then restart Grafana:
-```bash
-docker compose -f docker-compose-monitoring.yml restart grafana
-```
-
-> **Important:** Restore all values to production settings after testing is complete.
-
----
-
-### Test 1 — Container Down + Start Alert
-
-```bash
-# Step 1: Stop a container
-docker stop frontend
-
-# Wait ~2 min (testing) or ~10 min (production)
-
-# Step 2: Check Grafana
-# http://localhost:3001 → Alerting → Alert Rules
-# "Container Down Alert" should show red FIRING badge
-
-# Step 3: Check email inbox
-# Subject: 🚨 Container Down Alert — frontend
-
-# Step 4: Start the container back
-docker start frontend
-
-# Wait ~2 min
-# Subject: ✅ Container Start Alert — frontend
-```
-
----
-
-### Test 2 — Multiple Containers Down + Start
-
-```bash
-# Stop two containers at the same time
-docker stop frontend nginx
-
-# Wait — ONE grouped email expected
-# Subject: 🚨 Container Down Alert — frontend, nginx
-
-# Start one (test separate start alert)
-docker start nginx
-# Wait — separate email for nginx only
-# Subject: ✅ Container Start Alert — nginx
-
-# Start the other
-docker start frontend
-# Wait — separate email for frontend
-# Subject: ✅ Container Start Alert — frontend
-```
-
----
-
-### Test 3 — Container CPU / Memory Alert
-
-```bash
-# Step 1: Temporarily lower threshold to trigger immediately
-# In container-alerts.yml → find "Container Wise CPU Alert" → change:
-#   params: [80]  →  params: [1]
-
-# Step 2: Restart Grafana
-docker compose -f docker-compose-monitoring.yml restart grafana
-
-# Wait 5 min (or 1 min if interval reduced)
-# Email: 🚨 Container Wise CPU Alert — backend, frontend, mongo, nginx
-
-# Step 3: Restore threshold back to 80 and restart Grafana
-```
-
-Repeat the same for **Container Wise Memory Alert**.
-
----
-
-### Test 4 — Monitoring Container Down
-
-```bash
-# Stop cadvisor
-docker stop cadvisor
-
-# Wait ~2 min
-# Email: 🚨 Monitoring Container Down Alert — cadvisor
-
-# Restore
-docker compose -f docker-compose-monitoring.yml up -d cadvisor
-```
-
----
-
-### Test 5 — Infrastructure CPU / Memory / Disk Alert
-
-```bash
-# Temporarily lower all 3 thresholds in infrastructure-alerts.yml
-# params: [80]  →  params: [1]
-# Restart Grafana, wait 5 min
-# Email: 🚨 [CRITICAL] CPU Alert
-# Email: 🚨 [CRITICAL] Memory Usage Alert
-# Email: 🚨 [CRITICAL] Disk Usage Alert
-
-# Restore thresholds back to 80 after testing
-```
-
----
-
-## Dynamic Label Filtering
-
-All alert rules use Docker Compose labels instead of hardcoded container names:
+Gmail SMTP is configured in the Grafana deployment via environment variables (credentials stored in `grafana-secrets`):
 
 ```yaml
-# docker-compose-app.yml — app containers
-labels:
-  - "app_role=application"
-
-# docker-compose-monitoring.yml — monitoring containers (except Grafana)
-labels:
-  - "app_role=monitoring"
+GF_SMTP_ENABLED: "true"
+GF_SMTP_HOST: "smtp.gmail.com:587"
+GF_SMTP_SKIP_VERIFY: "true"
 ```
-
-PromQL filter:
-```promql
-container_label_app_role="application"   # targets backend, frontend, mongo, nginx
-container_label_app_role="monitoring"    # targets prometheus, cadvisor, node-exporter, loki, promtail
-```
-
-This means adding a new container with the correct label automatically includes it in alerts — no rule changes needed.
 
 ---
 
-## Email Template Customizations
+## Useful Commands
 
-Modified `grafana/ng_alert_notification.html` (Grafana's default email template):
+### Check pod status
 
-| Customization                   | Detail                                                     |
-|---                              |---                                                         |
-| Colored header banner           | Red gradient for firing, Green gradient for start/resolved |
-| Left border on cards            | Red  for firing, Green  for resolved/start                 | 
-| Badge color                     | Red "Firing" badge, Green "Running" badge                  |
-| Removed "Grouped by" section    | Cleaner email with no label metadata header                |
-| "Container Start Alert" heading | Resolved section shows start-specific title                |
-| View Alert + Silence buttons    | Working links back to Grafana instance                     |
-
----
-
-# 13. Grafana Alloy Migration and Alerting Fixes
-
----
-
-## Why Promtail Was Replaced
-
-Grafana Labs officially deprecated **Promtail** in favour of **Grafana Alloy**. The last Promtail release was `v3.0.0` — no new features, no security patches, no bug fixes going forward. Alloy is the unified successor agent that replaces Promtail, Grafana Agent.
-
----
-
-## Files Changed
-
-### 1. `docker-compose-monitoring.yml`
-
-
+```bash
+kubectl get pods -n weather-app
+kubectl get pods -n weather-monitoring
 ```
 
-# NEW
-alloy:
-  image: grafana/alloy:v1.16.1
-  container_name: alloy
-  user: root
-  labels:
-    - "app_role=monitoring"
-  volumes:
-    - /var/log:/var/log
-    - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    - /var/run/docker.sock:/var/run/docker.sock
-    - ./alloy-config.alloy:/etc/alloy/config.alloy
-  command: run /etc/alloy/config.alloy
-  mem_limit: 512m
-  networks:
-    - shared-monitoring
+### View pod logs
+
+```bash
+kubectl logs deployment/backend -n weather-app
+kubectl logs deployment/grafana -n weather-monitoring
+kubectl logs deployment/prometheus -n weather-monitoring
 ```
 
-**DNS added to Grafana service** (fixes `smtp.gmail.com` lookup timeout inside Docker):
+### Restart a deployment after config change
+
+```bash
+kubectl rollout restart deployment/grafana -n weather-monitoring
+kubectl rollout restart deployment/prometheus -n weather-monitoring
+```
+
+### Apply a single changed ConfigMap
+
+```bash
+kubectl apply -f k8s/configmaps/prometheus-config.yml
+kubectl rollout restart deployment/prometheus -n weather-monitoring
+```
+
+### Rebuild and redeploy frontend after code change
+
+```bash
+eval $(minikube docker-env)
+docker build -t samarthfunde45/weather-frontend:latest ./frontend
+kubectl rollout restart deployment/frontend -n weather-app
+```
+
+### Rebuild and redeploy backend after code change
+
+```bash
+eval $(minikube docker-env)
+docker build -t samarthfunde45/weather-backend:latest ./backend
+kubectl rollout restart deployment/backend -n weather-app
+```
+
+### Describe a pod for troubleshooting
+
+```bash
+kubectl describe pod <pod-name> -n weather-app
+kubectl describe pod <pod-name> -n weather-monitoring
+```
+
+### Exec into a pod
+
+```bash
+kubectl exec -it deployment/backend -n weather-app -- sh
+kubectl exec -it deployment/grafana -n weather-monitoring -- sh
+```
+
+### Test the weather API directly
+
+```bash
+NODEIP=$(minikube ip)
+curl http://$NODEIP:31252/weather/London
+```
+
+### Check Prometheus targets
+
+```bash
+minikube service prometheus -n weather-monitoring
+# Then open: http://<ip>:<port>/targets
+```
+
+### Delete and redeploy everything
+
+```bash
+# Delete app stack
+kubectl delete -f k8s/app/
+
+# Delete monitoring stack
+kubectl delete -f k8s/monitoring/
+
+# Reapply
+kubectl apply -f k8s/app/
+kubectl apply -f k8s/monitoring/
+```
+
+---
+
+## Troubleshooting
+
+### Pod stuck in CrashLoopBackOff
+
+```bash
+kubectl logs <pod-name> -n <namespace> --previous
+kubectl describe pod <pod-name> -n <namespace>
+```
+
+### Prometheus lock error on restart
+
+If Prometheus fails with `lock DB directory: resource temporarily unavailable`, ensure `--storage.tsdb.no-lockfile` is set and `strategy: Recreate` is configured (not `RollingUpdate`). This is required on Minikube with the Docker driver because overlayfs does not support file locking.
+
+### cAdvisor shows no container data
+
+Ensure the image is `v0.51.0` or later. Earlier versions fail to register the Docker factory on Docker 29.x:
+
+```
+Registration of the docker container factory failed:
+client version 1.41 is too old. Minimum supported API version is 1.44
+```
+
+Fix: update the image in `k8s/monitoring/cadvisor-daemonset.yml` to `gcr.io/cadvisor/cadvisor:v0.51.0`.
+
+### Alloy logs not appearing in Grafana
+
+Check that the Alloy ClusterRole includes `pods/log`:
 
 ```yaml
-grafana:
-  dns:
-    - 8.8.8.8
-    - 8.8.4.4
+resources: ["pods", "pods/log", "nodes", "namespaces", "endpoints"]
 ```
 
----
+Also verify Alloy is using `loki.source.kubernetes`, not `loki.source.file`.
 
-### 2. `alloy-config.alloy` (new file — replaces `promtail-config.yml`)
+### Grafana dashboard shows "No data"
 
-Full 1:1 replacement of `promtail-config.yml` using Alloy's River/HCL syntax.
-
-All 7 Docker labels preserved — critical ones used by dashboards:
-
-| Label                                                     | Used by |
-|                                              |                                               |
-| `job=docker`                                 |  Logs dashboard base filter `{job="docker"}`  |
-| `container_name_clean`                       | Logs dashboard variable dropdown              |
-| `container_id`                               | Identification                                |
-| `container_name`                             | Raw name with leading `/`                     |
-| `container_label_com_docker_compose_service` | Compose service name                          |
-| `stream`                                     | stdout / stderr                               |
-| `compose_project`                            | Project grouping                              |
-
-```hcl
-discovery.docker "containers" {
-  host             = "unix:///var/run/docker.sock"
-  refresh_interval = "5s"
-}
-
-discovery.relabel "docker_meta" {
-  targets = discovery.docker.containers.targets
-  # ... 7 relabeling rules ...
-}
-
-loki.source.docker "docker_logs" {
-  host       = "unix:///var/run/docker.sock"
-  targets    = discovery.relabel.docker_meta.output
-  forward_to = [loki.process.docker_pipeline.receiver]
-}
-
-loki.process "docker_pipeline" {
-  forward_to = [loki.write.loki_push.receiver]
-  stage.docker {}
-}
-
-loki.write "loki_push" {
-  endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
-  }
-}
-```
-
----
-![alt text](image.png)
-
-![alt text](image-1.png)
-
-![alt text](image-2.png)
-
-![alt text](image-3.png)
+- For container metrics: verify cAdvisor is running and Prometheus has `container` labels in its targets
+- For CPU bargauge: use `rate(...[2m])` not `rate(...[1m])`
+- For memory limit panels: ensure `container_spec_memory_limit_bytes` filter does not include `container_spec_memory_limit_bytes!=0` inside `{}` (this is not valid PromQL — value comparisons must be outside the label selector)
 
 ---
 
-# Reference Taken
+## Key Learnings
 
-https://oneuptime.com/blog/post/2026-01-30-grafana-provisioning-automation/view
-
----
+- Kubernetes pod-to-pod communication uses DNS: `<service>.<namespace>.svc.cluster.local`
+- Frontend JavaScript runs in the browser — `localhost` means the user's machine, not any pod. All API calls must use relative URLs and be proxied through nginx
+- cAdvisor Docker API version must match the host Docker version — v0.51.0+ required for Docker 29.x
+- `rate()` in PromQL needs at least 2 data points — use a longer window (`[2m]`) for freshly scraped metrics
+- Label selectors `{}` in PromQL only accept label name/value comparisons — metric name comparisons like `metric_name!=0` inside `{}` are invalid and silently return no data
+- `loki.source.file` in Alloy calls OS `stat()` with glob paths — Go does not expand globs in `stat()`, so file discovery fails. `loki.source.kubernetes` uses the K8s API instead and works correctly
+- Prometheus on Minikube (Docker driver) requires `--storage.tsdb.no-lockfile` because overlayfs does not support POSIX file locks
+- `imagePullPolicy: Never` with `eval $(minikube docker-env)` allows building images directly into Minikube's Docker daemon without pushing to a registry
