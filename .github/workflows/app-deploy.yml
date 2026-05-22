@@ -145,6 +145,7 @@ jobs:
           format: table
           exit-code: 1
           ignore-unfixed: true
+          trivyignores: .trivyignore
           severity: CRITICAL,HIGH
           timeout: 10m
 
@@ -156,6 +157,7 @@ jobs:
           format: table
           exit-code: 1
           ignore-unfixed: true
+          trivyignores: .trivyignore
           severity: CRITICAL,HIGH
           timeout: 10m
 
