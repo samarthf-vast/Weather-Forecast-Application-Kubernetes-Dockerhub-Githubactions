@@ -1,7 +1,7 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-ENV NODE_OPTIONS=--max-old-space-size=1536
+ENV NODE_OPTIONS="--openssl-legacy-provider --max-old-space-size=1536"
 ENV GENERATE_SOURCEMAP=false
 ENV CI=false
 RUN npm install --legacy-peer-deps --no-audit --no-fund
