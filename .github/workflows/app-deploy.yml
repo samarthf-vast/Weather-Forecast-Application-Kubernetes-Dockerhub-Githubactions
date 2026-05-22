@@ -130,6 +130,13 @@ jobs:
       )
 
     steps:
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: ${{ runner.os }}-trivy-db
+          restore-keys: ${{ runner.os }}-trivy-db
+
       - name: Trivy — Scan Backend Image
         if: needs.build-backend.result == 'success'
         uses: aquasecurity/trivy-action@v0.36.0
@@ -139,6 +146,7 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+          timeout: 10m
 
       - name: Trivy — Scan Frontend Image
         if: needs.build-frontend.result == 'success'
@@ -149,6 +157,7 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+          timeout: 10m
 
  
   # JOB 6: Push to DockerHub, Only runs if Trivy scan passed
