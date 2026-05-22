@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: samarthfunde45/weather-backend:latest
+          image: samarthfunde45/weather-backend:IMAGE_TAG
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000

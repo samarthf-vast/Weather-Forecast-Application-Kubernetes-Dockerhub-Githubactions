@@ -231,22 +231,29 @@ jobs:
       - name: Apply Namespace
         run: kubectl apply -f k8s/namespace.yml
 
-      - name: Apply App Manifests
-        run: kubectl apply -f k8s/app/
+      - name: Apply Non-Deployment Manifests
+        run: |
+          kubectl apply -f k8s/app/backend-service.yml
+          kubectl apply -f k8s/app/frontend-service.yml
+          kubectl apply -f k8s/app/ingress.yml
+          kubectl apply -f k8s/app/mongo-pvc.yml
+          kubectl apply -f k8s/app/mongo-service.yml
+          kubectl apply -f k8s/app/mongo-statefulset.yml
+          kubectl apply -f k8s/app/nginx-config.yml
+          kubectl apply -f k8s/app/nginx-deployment.yml
+          kubectl apply -f k8s/app/nginx-service.yml
 
-      - name: Update Backend Image
+      - name: Deploy Backend
         if: needs.build-backend.result == 'success'
         run: |
-          kubectl set image deployment/backend \
-            backend=${{ env.BACKEND_IMAGE }}:${{ env.VERSION }} \
-            -n weather-app
+          sed "s|IMAGE_TAG|${{ env.VERSION }}|g" k8s/app/backend-deployment.yml \
+            | kubectl apply -f -
 
-      - name: Update Frontend Image
+      - name: Deploy Frontend
         if: needs.build-frontend.result == 'success'
         run: |
-          kubectl set image deployment/frontend \
-            frontend=${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }} \
-            -n weather-app
+          sed "s|IMAGE_TAG|${{ env.VERSION }}|g" k8s/app/frontend-deployment.yml \
+            | kubectl apply -f -
 
       - name: Wait for Backend Rollout
         if: needs.build-backend.result == 'success'
