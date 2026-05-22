@@ -1,6 +1,6 @@
-# These CVEs are in react-scripts transitive dependencies.
-# They cannot be fixed without breaking react-scripts 5.0.1.
-# Ignored until react-scripts releases updated versions.
+# All CVEs below are transitive dependencies of react-scripts 5.0.1
+# Cannot be fixed via overrides without breaking the build
+# Ignored until react-scripts releases updated versions
 
 # cross-spawn
 CVE-2024-21538
@@ -13,10 +13,19 @@ CVE-2026-26996
 CVE-2026-27903
 CVE-2026-27904
 
-# tar (transitive via react-scripts)
+# tar / node-tar (transitive via react-scripts)
 CVE-2026-23745
 CVE-2026-23950
 CVE-2026-24842
 CVE-2026-26960
 CVE-2026-29786
 CVE-2026-31802
+
+# nth-check
+CVE-2021-3803
+
+# serialize-javascript (overriding breaks css-minimizer-webpack-plugin)
+GHSA-5c6j-r48x-rmvq
+
+# underscore
+CVE-2026-27601
