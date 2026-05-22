@@ -46,6 +46,7 @@ spec:
                 - --quiet
             initialDelaySeconds: 30
             periodSeconds: 15
+            timeoutSeconds: 10
             failureThreshold: 3
           readinessProbe:
             exec:
@@ -56,6 +57,7 @@ spec:
                 - --quiet
             initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 10
             failureThreshold: 3
           volumeMounts:
             - name: mongo-storage
