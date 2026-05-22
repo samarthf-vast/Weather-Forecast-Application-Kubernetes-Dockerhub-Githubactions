@@ -2,7 +2,7 @@ FROM node:18-alpine AS build
 RUN apk upgrade --no-cache
 WORKDIR /app
 COPY package*.json ./
-ENV NODE_OPTIONS=--max-old-space-size=512
+ENV NODE_OPTIONS=--max-old-space-size=1536
 RUN npm install --legacy-peer-deps --no-audit --no-fund
 COPY . .
 RUN npm run build
