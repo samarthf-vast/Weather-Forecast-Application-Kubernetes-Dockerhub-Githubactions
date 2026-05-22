@@ -1,4 +1,3 @@
-
 name: App CI/CD
 
 on:
@@ -9,12 +8,13 @@ env:
   BACKEND_IMAGE: samarthfunde45/weather-backend
   FRONTEND_IMAGE: samarthfunde45/weather-frontend
   VERSION: v${{ github.run_number }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
 
-  # ──────────────────────────────────────────
+  
   # JOB 1: Detect which files changed
-  # ──────────────────────────────────────────
+ 
   detect-changes:
     name: Detect Changes
     runs-on: self-hosted
@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Check which paths changed
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4.0.1
         id: filter
         with:
           base: master
@@ -41,7 +41,8 @@ jobs:
               - 'k8s/**'
 
 
-  # JOB 2: SonarCloud Code Quality Scan, Scans source code for bugs, vulnerabilities and code smells before building images.
+  # JOB 2: SonarCloud Code Quality Scan
+  # Runs before building — scans source code
   
   sonarcloud:
     name: SonarCloud Code Scan
@@ -53,21 +54,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
-          fetch-depth: 0   # full history needed for SonarCloud blame
+          fetch-depth: 0
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
 
-  # JOB 3: Build & Push Backend
- 
+  # JOB 3: Build Backend (local only, no push)
+
   build-backend:
-    name: Build & Push Backend
+    name: Build Backend
     runs-on: self-hosted
     needs: [detect-changes, sonarcloud]
     if: |
@@ -77,37 +79,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build & Push Backend Image
-        uses: docker/build-push-action@v5
+      - name: Build Backend Image (local only)
+        uses: docker/build-push-action@v7.1.0
         with:
           context: ./backend
-          push: true
+          push: false
+          load: true
           tags: |
-            ${{ env.BACKEND_IMAGE }}:latest
             ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }}
 
-      # Trivy scans the image AFTER push for scan vulnerabilities
-      - name: Trivy — Scan Backend Image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }}
-          format: table
-          exit-code: 0         # 0 = show results but don't fail pipeline
-          severity: CRITICAL,HIGH
-
  
-  # JOB 4: Build & Push Frontend
-  
+  # JOB 4: Build Frontend (local only, no push)
+ 
   build-frontend:
-    name: Build & Push Frontend
+    name: Build Frontend
     runs-on: self-hosted
     needs: [detect-changes, sonarcloud]
     if: |
@@ -117,40 +104,93 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
+      - name: Build Frontend Image (local only)
+        uses: docker/build-push-action@v7.1.0
+        with:
+          context: ./frontend
+          push: false
+          load: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
+
+ 
+  # JOB 5: Trivy Security Scan,  Scans LOCAL images BEFORE pushing to DockerHub,  If CRITICAL found → pipeline fails, nothing pushed
+
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: self-hosted
+    needs: [detect-changes, build-backend, build-frontend]
+    if: |
+      always() && !cancelled() &&
+      (
+        needs.build-backend.result  == 'success' ||
+        needs.build-frontend.result == 'success'
+      )
+
+    steps:
+      - name: Trivy — Scan Backend Image
+        if: needs.build-backend.result == 'success'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }}
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+
+      - name: Trivy — Scan Frontend Image
+        if: needs.build-frontend.result == 'success'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+
+ 
+  # JOB 6: Push to DockerHub, Only runs if Trivy scan passed
+  
+  push-images:
+    name: Push to DockerHub
+    runs-on: self-hosted
+    needs: [detect-changes, build-backend, build-frontend, trivy-scan]
+    if: |
+      always() && !cancelled() &&
+      needs.trivy-scan.result == 'success' &&
+      (
+        needs.build-backend.result  == 'success' ||
+        needs.build-frontend.result == 'success'
+      )
+
+    steps:
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4.1.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build & Push Frontend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
+      - name: Push Backend Image to DockerHub
+        if: needs.build-backend.result == 'success'
+        run: |
+          docker push ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }}
+          docker tag ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }} ${{ env.BACKEND_IMAGE }}:latest
+          docker push ${{ env.BACKEND_IMAGE }}:latest
 
-      # Trivy scans the image AFTER push for CVE vulnerabilities
-      - name: Trivy — Scan Frontend Image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
-          format: table
-          exit-code: 0         # 0 = show results but don't fail pipeline
-          severity: CRITICAL,HIGH
+      - name: Push Frontend Image to DockerHub
+        if: needs.build-frontend.result == 'success'
+        run: |
+          docker push ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
+          docker tag ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }} ${{ env.FRONTEND_IMAGE }}:latest
+          docker push ${{ env.FRONTEND_IMAGE }}:latest
 
-  # ──────────────────────────────────────────
-  # JOB 5: Deploy to Kubernetes
-  # Runs when any build succeeds OR k8s files changed
-  # ──────────────────────────────────────────
+ 
+  # JOB 7: Deploy to Kubernetes, Runs after clean push to DockerHub
+ 
   deploy:
     name: Deploy to Kubernetes
     runs-on: self-hosted
-    needs: [detect-changes, build-backend, build-frontend]
+    needs: [detect-changes, push-images, build-backend, build-frontend]
     if: |
       always() && !cancelled() &&
       (
@@ -161,7 +201,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
 
       - name: Create App Secrets in Kubernetes
         run: |
