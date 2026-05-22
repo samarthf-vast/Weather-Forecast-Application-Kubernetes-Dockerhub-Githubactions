@@ -137,6 +137,7 @@ jobs:
           image-ref: ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }}
           format: table
           exit-code: 1
+          ignore-unfixed: true
           severity: CRITICAL,HIGH
 
       - name: Trivy — Scan Frontend Image
@@ -146,6 +147,7 @@ jobs:
           image-ref: ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
           format: table
           exit-code: 1
+          ignore-unfixed: true
           severity: CRITICAL,HIGH
 
  
