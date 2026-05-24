@@ -1,18 +1,34 @@
-FROM node:18.20-alpine3.20
+# FROM node:18-alpine
+# WORKDIR /app
+# COPY package*.json ./
+# RUN npm ci --omit=dev
+# COPY . .
+# EXPOSE 5000
+# CMD ["npm", "start"]
+
+
+
+
+# Use lightweight Node.js image
+FROM node:18-alpine
+
+# Create app directory
 WORKDIR /app
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Copy dependency files first
+COPY package*.json ./
 
-COPY --chown=appuser:appgroup package*.json ./
-RUN npm ci --omit=dev
+# Install only production dependencies
+RUN npm ci --omit=dev --no-audit --no-fund
 
-COPY --chown=appuser:appgroup . .
+# Copy application source code
+COPY . .
 
+# Set production environment
 ENV NODE_ENV=production
 
-USER appuser
-
+# Expose backend port
 EXPOSE 5000
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://localhost:5000/health || exit 1
-CMD ["node", "index.js"]
+
+# Start application
+CMD ["npm", "start"]
