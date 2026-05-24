@@ -1,12 +1,11 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-ENV NODE_OPTIONS="--openssl-legacy-provider --max-old-space-size=1536"
 ENV GENERATE_SOURCEMAP=false
 ENV CI=false
-RUN npm install --legacy-peer-deps --no-audit --no-fund
+RUN npm ci
 COPY . .
-RUN npm run build
+RUN NODE_OPTIONS="--openssl-legacy-provider" npm run build
 
 FROM nginx:alpine
 RUN apk upgrade --no-cache
