@@ -12,6 +12,9 @@
 # Use lightweight Node.js image
 FROM node:18-alpine
 
+# Upgrade Alpine packages to fix OS-level CVEs
+RUN apk upgrade --no-cache
+
 # Create app directory
 WORKDIR /app
 
