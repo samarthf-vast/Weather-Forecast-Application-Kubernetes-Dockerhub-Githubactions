@@ -1,13 +1,11 @@
 # ---------- Build Stage ----------
 FROM node:18-alpine AS build
-
 WORKDIR /app
-
 # Copy dependency files first for better layer caching
 COPY package*.json ./
 
 # Clean and reproducible install
-RUN npm ci --legacy-peer-deps --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 # Copy application source
 COPY . .
