@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Clean and reproducible install
-RUN npm ci --no-audit 
+RUN npm ci --legacy-peer-deps --no-audit 
 
 # Copy application source
 COPY . .
