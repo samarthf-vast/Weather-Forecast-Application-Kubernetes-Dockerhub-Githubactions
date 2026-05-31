@@ -3,7 +3,7 @@ FROM node:18-alpine
 RUN apk upgrade --no-cache
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --omit=dev --no-audit
 # Copy application source code
 COPY . .
 # Set production environment
