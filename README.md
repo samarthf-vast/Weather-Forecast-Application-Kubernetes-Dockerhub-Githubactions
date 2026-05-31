@@ -123,7 +123,7 @@ Weather-Forecast-App/
 
 ## Prerequisites
 
-Before you start, make sure these are installed on your machine:
+Before you start, make sure these are installed on machine:
 
 ```bash
 # Check Docker
@@ -148,7 +148,7 @@ If anything is missing:
 ### Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/Weather-Forecast-App.git
+git clone https://github.com/username/Weather-Forecast-App.git
 cd Weather-Forecast-App
 ```
 
@@ -180,7 +180,7 @@ minikube   Ready    control-plane   30s
 The Kubernetes manifests use `imagePullPolicy: Never` which means images must be built directly inside Minikube's Docker daemon. No registry push is needed for local setup.
 
 ```bash
-# Point your terminal to Minikube's Docker daemon
+# Point terminal to Minikube's Docker daemon
 eval $(minikube docker-env)
 
 # Build backend image
@@ -231,10 +231,10 @@ Secrets store sensitive values like MongoDB credentials and Grafana SMTP passwor
 To encode any value:
 
 ```bash
-echo -n "your-value" | base64
+echo -n "value" | base64
 ```
 
-Edit the secret files with your own values:
+Edit the secret files with own values:
 
 ```bash
 nano k8s/secrets/app-secrets.yml
@@ -347,7 +347,7 @@ Example: `http://192.168.49.2:31252`
 minikube service grafana -n weather-monitoring
 ```
 
-This opens Grafana in your browser automatically.
+This opens Grafana in browser automatically.
 
 Default login:
 ```
@@ -395,8 +395,8 @@ Go to: **GitHub → Repository → Settings → Secrets and variables → Action
 
 | Secret | Description |
 |--------|-------------|
-| `DOCKER_USERNAME` | Your DockerHub username |
-| `DOCKER_PASSWORD` | Your DockerHub access token |
+| `DOCKER_USERNAME` | DockerHub username |
+| `DOCKER_PASSWORD` | DockerHub access token |
 | `SONAR_TOKEN` | SonarCloud project token |
 | `MONGO_USER` | MongoDB username |
 | `MONGO_PASS` | MongoDB password |
@@ -662,15 +662,15 @@ If images are missing, rebuild them (Step 3).
 
 ### Backend
 
-| Variable | Description |
-|----------|-------------|
-| `NODE_ENV` | Set to `production` in Dockerfile |
-| `MONGO_USER` | MongoDB username (from Kubernetes secret) |
-| `MONGO_PASS` | MongoDB password (from Kubernetes secret) |
-| `MONGO_HOST` | MongoDB service name |
-| `MONGO_PORT` | MongoDB port (default 27017) |
-| `MONGO_DB` | Database name |
-| `MONGO_AUTH_DB` | Auth database (usually `admin`) |
+| Variable       | Description                               |
+|----------------|-------------------------------------------|
+| `NODE_ENV`     | Set to `production` in Dockerfile         |
+| `MONGO_USER`   | MongoDB username (from Kubernetes secret) |
+| `MONGO_PASS`   | MongoDB password (from Kubernetes secret) |
+| `MONGO_HOST`   | MongoDB service name                      |
+| `MONGO_PORT`   | MongoDB port (default 27017)              |
+| `MONGO_DB`     | Database name                             |
+| `MONGO_AUTH_DB`| Auth database (usually `admin`)           |
 
 ---
 
