@@ -8,11 +8,10 @@ env:
   BACKEND_IMAGE: samarthfunde45/weather-backend
   FRONTEND_IMAGE: samarthfunde45/weather-frontend
   VERSION: v${{ github.run_number }}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  #FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
 
-  
   # JOB 1: Detect which files changed
  
   detect-changes:
@@ -195,7 +194,7 @@ jobs:
         run: |
           docker push ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
           docker tag ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }} ${{ env.FRONTEND_IMAGE }}:latest
-          docker push ${{ env.FRONTEND_IMAGE }}:latest
+          docker push ${{ env.runnerFRONTEND_IMAGE }}:latest
 
  
   # JOB 7: Deploy to Kubernetes, Runs after clean push to DockerHub
@@ -248,7 +247,9 @@ jobs:
           if [ "${{ needs.build-backend.result }}" == "success" ]; then
             TAG="${{ env.VERSION }}"
           else
-            TAG="latest"
+            TAG=$(kubectl get deployment backend -n weather-app \
+              -o jsonpath='{.spec.template.spec.containers[0].image}' \
+              2>/dev/null | cut -d: -f2 || echo "latest")
           fi
           sed "s|IMAGE_TAG|${TAG}|g" k8s/app/backend-deployment.yml | kubectl apply -f -
 
@@ -257,7 +258,9 @@ jobs:
           if [ "${{ needs.build-frontend.result }}" == "success" ]; then
             TAG="${{ env.VERSION }}"
           else
-            TAG="latest"
+            TAG=$(kubectl get deployment frontend -n weather-app \
+              -o jsonpath='{.spec.template.spec.containers[0].image}' \
+              2>/dev/null | cut -d: -f2 || echo "latest")
           fi
           sed "s|IMAGE_TAG|${TAG}|g" k8s/app/frontend-deployment.yml | kubectl apply -f -
 
