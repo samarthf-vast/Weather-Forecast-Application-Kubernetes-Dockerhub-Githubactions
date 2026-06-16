@@ -244,16 +244,22 @@ jobs:
           kubectl apply -f k8s/app/nginx-service.yml
 
       - name: Deploy Backend
-        if: needs.build-backend.result == 'success'
         run: |
-          sed "s|IMAGE_TAG|${{ env.VERSION }}|g" k8s/app/backend-deployment.yml \
-            | kubectl apply -f -
+          if [ "${{ needs.build-backend.result }}" == "success" ]; then
+            TAG="${{ env.VERSION }}"
+          else
+            TAG="latest"
+          fi
+          sed "s|IMAGE_TAG|${TAG}|g" k8s/app/backend-deployment.yml | kubectl apply -f -
 
       - name: Deploy Frontend
-        if: needs.build-frontend.result == 'success'
         run: |
-          sed "s|IMAGE_TAG|${{ env.VERSION }}|g" k8s/app/frontend-deployment.yml \
-            | kubectl apply -f -
+          if [ "${{ needs.build-frontend.result }}" == "success" ]; then
+            TAG="${{ env.VERSION }}"
+          else
+            TAG="latest"
+          fi
+          sed "s|IMAGE_TAG|${TAG}|g" k8s/app/frontend-deployment.yml | kubectl apply -f -
 
       - name: Wait for Backend Rollout
         if: needs.build-backend.result == 'success'
