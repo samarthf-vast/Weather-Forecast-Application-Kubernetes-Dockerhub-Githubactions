@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backend.port }}
+          env:
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_USER
+            - name: MONGO_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_PASS
+            - name: MONGO_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_HOST
+            - name: MONGO_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_PORT
+            - name: MONGO_DB
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_DB
+            - name: MONGO_AUTH_DB
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MONGO_AUTH_DB
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: {{ .Values.backend.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3

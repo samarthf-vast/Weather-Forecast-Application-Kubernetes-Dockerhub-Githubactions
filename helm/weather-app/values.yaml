@@ -1,0 +1,74 @@
+namespace: weather-app
+
+backend:
+  image:
+    repository: samarthfunde45/weather-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 5000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+frontend:
+  image:
+    repository: samarthfunde45/weather-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 80
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+nginx:
+  image:
+    repository: nginx
+    tag: "1.29.8-alpine"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 80
+  nodePort: 30926
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "100m"
+    limits:
+      memory: "128Mi"
+      cpu: "200m"
+
+mongo:
+  image:
+    repository: mongo
+    tag: "8.2.7"
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 27017
+  storage: "500Mi"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+ingress:
+  host: weatherapp.com
+
+secrets:
+  mongoUser: ""
+  mongoPass: ""
+  mongoHost: ""
+  mongoPort: ""
+  mongoDB: ""
+  mongoAuthDB: ""
