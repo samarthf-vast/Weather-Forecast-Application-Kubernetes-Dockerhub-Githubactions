@@ -8,7 +8,6 @@ env:
   BACKEND_IMAGE: samarthfunde45/weather-backend
   FRONTEND_IMAGE: samarthfunde45/weather-frontend
   VERSION: v${{ github.run_number }}
-  #FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
 
@@ -187,15 +186,13 @@ jobs:
         if: needs.build-backend.result == 'success'
         run: |
           docker push ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }}
-          docker tag ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }} ${{ env.BACKEND_IMAGE }}:latest
-          docker push ${{ env.BACKEND_IMAGE }}:latest
+          
 
       - name: Push Frontend Image to DockerHub
         if: needs.build-frontend.result == 'success'
         run: |
           docker push ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
-          docker tag ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }} ${{ env.FRONTEND_IMAGE }}:latest
-          docker push ${{ env.FRONTEND_IMAGE }}:latest
+          
 
 
   # JOB 7: Deploy to Kubernetes via Helm
