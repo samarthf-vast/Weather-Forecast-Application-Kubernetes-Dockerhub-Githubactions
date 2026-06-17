@@ -224,7 +224,8 @@ jobs:
           else
             BACKEND_TAG=$(kubectl get deployment backend -n weather-app \
               -o jsonpath='{.spec.template.spec.containers[0].image}' \
-              2>/dev/null | cut -d: -f2 || echo "latest")
+              2>/dev/null | cut -d: -f2)
+            [ -z "$BACKEND_TAG" ] && BACKEND_TAG="latest"
           fi
 
           if [ "${{ needs.build-frontend.result }}" == "success" ]; then
@@ -232,7 +233,8 @@ jobs:
           else
             FRONTEND_TAG=$(kubectl get deployment frontend -n weather-app \
               -o jsonpath='{.spec.template.spec.containers[0].image}' \
-              2>/dev/null | cut -d: -f2 || echo "latest")
+              2>/dev/null | cut -d: -f2)
+            [ -z "$FRONTEND_TAG" ] && FRONTEND_TAG="latest"
           fi
 
           echo "backend_tag=${BACKEND_TAG}" >> $GITHUB_OUTPUT
