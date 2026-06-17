@@ -40,7 +40,7 @@ app.use((req, res, next) => {
 connectDB();
 
 // ===============================
-////// WEATHER API ROUTE (FIXED)
+//////// WEATHER API ROUTE (FIXED)
 // ===============================
 app.get("/weather/:city", async (req, res) => {
   try {
