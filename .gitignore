@@ -8,7 +8,6 @@ actions-runner/
 actions-runner-monitoring/
 
 # Secrets — never push these
-k8s/secrets/
 .env
 .env.*
 *.pem
