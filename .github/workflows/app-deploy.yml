@@ -13,14 +13,14 @@ env:
 jobs:
 
   # JOB 1: Detect which files changed
- 
+
   detect-changes:
     name: Detect Changes
     runs-on: self-hosted
     outputs:
       backend:  ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
-      k8s:      ${{ steps.filter.outputs.k8s }}
+      helm:     ${{ steps.filter.outputs.helm }}
 
     steps:
       - name: Checkout code
@@ -36,13 +36,13 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
-            k8s:
-              - 'k8s/**'
+            helm:
+              - 'helm/**'
 
 
   # JOB 2: SonarCloud Code Quality Scan
   # Runs before building — scans source code
-  
+
   sonarcloud:
     name: SonarCloud Code Scan
     runs-on: self-hosted
@@ -89,9 +89,9 @@ jobs:
           tags: |
             ${{ env.BACKEND_IMAGE }}:${{ env.VERSION }}
 
- 
+
   # JOB 4: Build Frontend (local only, no push)
- 
+
   build-frontend:
     name: Build Frontend
     runs-on: self-hosted
@@ -114,8 +114,9 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
 
- 
-  # JOB 5: Trivy Security Scan,  Scans LOCAL images BEFORE pushing to DockerHub,  If CRITICAL found → pipeline fails, nothing pushed
+
+  # JOB 5: Trivy Security Scan — scans LOCAL images BEFORE pushing to DockerHub
+  # If CRITICAL/HIGH found → pipeline fails, nothing pushed
 
   trivy-scan:
     name: Trivy Security Scan
@@ -160,9 +161,9 @@ jobs:
           severity: CRITICAL,HIGH
           timeout: 10m
 
- 
-  # JOB 6: Push to DockerHub, Only runs if Trivy scan passed
-  
+
+  # JOB 6: Push to DockerHub — only runs if Trivy scan passed
+
   push-images:
     name: Push to DockerHub
     runs-on: self-hosted
@@ -194,11 +195,11 @@ jobs:
         run: |
           docker push ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }}
           docker tag ${{ env.FRONTEND_IMAGE }}:${{ env.VERSION }} ${{ env.FRONTEND_IMAGE }}:latest
-          docker push ${{ env.runnerFRONTEND_IMAGE }}:latest
+          docker push ${{ env.FRONTEND_IMAGE }}:latest
 
- 
-  # JOB 7: Deploy to Kubernetes, Runs after clean push to DockerHub
- 
+
+  # JOB 7: Deploy to Kubernetes via Helm
+
   deploy:
     name: Deploy to Kubernetes
     runs-on: self-hosted
@@ -208,69 +209,49 @@ jobs:
       (
         needs.build-backend.result  == 'success' ||
         needs.build-frontend.result == 'success' ||
-        needs.detect-changes.outputs.k8s == 'true'
+        needs.detect-changes.outputs.helm == 'true'
       )
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6.0.2
 
-      - name: Create App Secrets in Kubernetes
-        run: |
-          kubectl create secret generic app-secrets \
-            --from-literal=MONGO_USER=${{ secrets.MONGO_USER }} \
-            --from-literal=MONGO_PASS=${{ secrets.MONGO_PASS }} \
-            --from-literal=MONGO_HOST=${{ secrets.MONGO_HOST }} \
-            --from-literal=MONGO_PORT=${{ secrets.MONGO_PORT }} \
-            --from-literal=MONGO_DB=${{ secrets.MONGO_DB }} \
-            --from-literal=MONGO_AUTH_DB=${{ secrets.MONGO_AUTH_DB }} \
-            --namespace=weather-app \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Apply Namespace
-        run: kubectl apply -f k8s/namespace.yml
-
-      - name: Apply Non-Deployment Manifests
-        run: |
-          kubectl apply -f k8s/app/backend-service.yml
-          kubectl apply -f k8s/app/frontend-service.yml
-          kubectl apply -f k8s/app/ingress.yml
-          kubectl apply -f k8s/app/mongo-pvc.yml
-          kubectl apply -f k8s/app/mongo-service.yml
-          kubectl apply -f k8s/app/mongo-statefulset.yml
-          kubectl apply -f k8s/app/nginx-config.yml
-          kubectl apply -f k8s/app/nginx-deployment.yml
-          kubectl apply -f k8s/app/nginx-service.yml
-
-      - name: Deploy Backend
+      - name: Determine Image Tags
+        id: tags
         run: |
           if [ "${{ needs.build-backend.result }}" == "success" ]; then
-            TAG="${{ env.VERSION }}"
+            BACKEND_TAG="${{ env.VERSION }}"
           else
-            TAG=$(kubectl get deployment backend -n weather-app \
+            BACKEND_TAG=$(kubectl get deployment backend -n weather-app \
               -o jsonpath='{.spec.template.spec.containers[0].image}' \
               2>/dev/null | cut -d: -f2 || echo "latest")
           fi
-          sed "s|IMAGE_TAG|${TAG}|g" k8s/app/backend-deployment.yml | kubectl apply -f -
 
-      - name: Deploy Frontend
-        run: |
           if [ "${{ needs.build-frontend.result }}" == "success" ]; then
-            TAG="${{ env.VERSION }}"
+            FRONTEND_TAG="${{ env.VERSION }}"
           else
-            TAG=$(kubectl get deployment frontend -n weather-app \
+            FRONTEND_TAG=$(kubectl get deployment frontend -n weather-app \
               -o jsonpath='{.spec.template.spec.containers[0].image}' \
               2>/dev/null | cut -d: -f2 || echo "latest")
           fi
-          sed "s|IMAGE_TAG|${TAG}|g" k8s/app/frontend-deployment.yml | kubectl apply -f -
 
-      - name: Wait for Backend Rollout
-        if: needs.build-backend.result == 'success'
-        run: kubectl rollout status deployment/backend -n weather-app --timeout=120s
+          echo "backend_tag=${BACKEND_TAG}" >> $GITHUB_OUTPUT
+          echo "frontend_tag=${FRONTEND_TAG}" >> $GITHUB_OUTPUT
 
-      - name: Wait for Frontend Rollout
-        if: needs.build-frontend.result == 'success'
-        run: kubectl rollout status deployment/frontend -n weather-app --timeout=300s
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install weather-app ./helm/weather-app \
+            --set backend.image.tag=${{ steps.tags.outputs.backend_tag }} \
+            --set frontend.image.tag=${{ steps.tags.outputs.frontend_tag }} \
+            --set secrets.mongoUser=${{ secrets.MONGO_USER }} \
+            --set secrets.mongoPass=${{ secrets.MONGO_PASS }} \
+            --set secrets.mongoHost=${{ secrets.MONGO_HOST }} \
+            --set secrets.mongoPort=${{ secrets.MONGO_PORT }} \
+            --set secrets.mongoDB=${{ secrets.MONGO_DB }} \
+            --set secrets.mongoAuthDB=${{ secrets.MONGO_AUTH_DB }} \
+            --atomic \
+            --timeout=5m \
+            --create-namespace
 
       - name: Verify All Pods
         run: kubectl get pods -n weather-app
