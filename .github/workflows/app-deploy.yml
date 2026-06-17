@@ -225,7 +225,10 @@ jobs:
             BACKEND_TAG=$(kubectl get deployment backend -n weather-app \
               -o jsonpath='{.spec.template.spec.containers[0].image}' \
               2>/dev/null | cut -d: -f2)
-            [ -z "$BACKEND_TAG" ] && BACKEND_TAG="latest"
+            if [ -z "$BACKEND_TAG" ]; then
+              echo "ERROR: Backend build was skipped and no existing deployment found."
+              exit 1
+            fi
           fi
 
           if [ "${{ needs.build-frontend.result }}" == "success" ]; then
@@ -234,7 +237,10 @@ jobs:
             FRONTEND_TAG=$(kubectl get deployment frontend -n weather-app \
               -o jsonpath='{.spec.template.spec.containers[0].image}' \
               2>/dev/null | cut -d: -f2)
-            [ -z "$FRONTEND_TAG" ] && FRONTEND_TAG="latest"
+            if [ -z "$FRONTEND_TAG" ]; then
+              echo "ERROR: Frontend build was skipped and no existing deployment found."
+              exit 1
+            fi
           fi
 
           echo "backend_tag=${BACKEND_TAG}" >> $GITHUB_OUTPUT
