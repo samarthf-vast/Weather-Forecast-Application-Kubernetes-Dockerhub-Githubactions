@@ -7,9 +7,18 @@ frontend/node_modules/
 actions-runner/
 actions-runner-monitoring/
 
-# Secrets
+# Secrets — never push these
 k8s/secrets/
 .env
+.env.*
+*.pem
+*.key
+*-secret.yaml
+*-secret.yml
+values-prod.yaml
+values-prod.yml
+secrets.yaml
+secrets.yml
 
 # Build output
 frontend/build/
