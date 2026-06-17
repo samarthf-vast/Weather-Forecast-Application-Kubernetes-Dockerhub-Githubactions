@@ -26,6 +26,9 @@ RUN apk upgrade --no-cache
 # Copy React build files
 COPY --from=build /app/build /usr/share/nginx/html
 
+# SPA routing — serve index.html for all routes
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Expose nginx port
 EXPOSE 80
 
