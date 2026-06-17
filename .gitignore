@@ -10,10 +10,7 @@ actions-runner-monitoring/
 .env.*
 *.pem
 *.key
-*-secret.yaml
-*-secret.yml
-values-prod.yaml
-values-prod.yml
+helm/weather-app/secrets.yaml
 
 # Build output
 frontend/build/
