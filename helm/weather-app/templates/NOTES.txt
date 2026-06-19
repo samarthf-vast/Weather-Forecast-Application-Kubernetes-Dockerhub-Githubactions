@@ -1,4 +1,4 @@
-Weather App deployed successfully..!
+Weather App deployed successfully...!
 
 Access the application:
   http://{{ .Values.ingress.host }}
