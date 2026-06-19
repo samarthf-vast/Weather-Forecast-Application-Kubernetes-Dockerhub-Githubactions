@@ -1,4 +1,5 @@
 ingress:
+  enabled: true
   host: dev.weatherapp.com
 
 apps:

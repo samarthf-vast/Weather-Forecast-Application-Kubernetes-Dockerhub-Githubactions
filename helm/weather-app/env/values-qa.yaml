@@ -1,4 +1,5 @@
 ingress:
+  enabled: true
   host: qa.weatherapp.com
 
 apps:
