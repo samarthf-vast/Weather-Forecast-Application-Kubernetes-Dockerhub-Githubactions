@@ -238,7 +238,11 @@ jobs:
 
       - name: Deploy with Helm
         run: |
+          VALUES_FILE=""
+          [ "${{ github.ref_name }}" != "master" ] && VALUES_FILE="-f helm/weather-app/values-${{ github.ref_name }}.yaml"
+
           helm upgrade --install ${{ env.RELEASE }} ./helm/weather-app \
+            $VALUES_FILE \
             --set namespace=${{ env.NAMESPACE }} \
             --set backend.image.tag=${{ steps.tags.outputs.backend_tag }} \
             --set frontend.image.tag=${{ steps.tags.outputs.frontend_tag }} \

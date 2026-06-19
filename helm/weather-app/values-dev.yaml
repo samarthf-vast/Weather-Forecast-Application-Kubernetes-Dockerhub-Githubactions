@@ -10,3 +10,6 @@ frontend:
 
 ingress:
   host: dev.weatherapp.com
+
+nginx:
+  nodePort: 30927
