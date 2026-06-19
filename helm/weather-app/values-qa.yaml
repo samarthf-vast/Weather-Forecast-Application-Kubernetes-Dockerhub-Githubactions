@@ -1,12 +1,8 @@
 backend:
   replicas: 2
-  image:
-    tag: v51
 
 frontend:
   replicas: 2
-  image:
-    tag: v52
 
 ingress:
   host: qa.weatherapp.com
