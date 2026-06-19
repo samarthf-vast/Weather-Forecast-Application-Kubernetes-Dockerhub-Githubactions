@@ -242,13 +242,13 @@ jobs:
       - name: Deploy with Helm
         run: |
           VALUES_FILE=""
-          [ "${{ github.ref_name }}" != "master" ] && VALUES_FILE="-f helm/weather-app/values-${{ github.ref_name }}.yaml"
+          [ "${{ github.ref_name }}" != "master" ] && VALUES_FILE="-f helm/weather-app/env/values-${{ github.ref_name }}.yaml"
 
           helm upgrade --install ${{ env.RELEASE }} ./helm/weather-app \
             $VALUES_FILE \
             -n ${{ env.NAMESPACE }} \
-            --set backend.image.tag=${{ steps.tags.outputs.backend_tag }} \
-            --set frontend.image.tag=${{ steps.tags.outputs.frontend_tag }} \
+            --set apps.backend.image.tag=${{ steps.tags.outputs.backend_tag }} \
+            --set apps.frontend.image.tag=${{ steps.tags.outputs.frontend_tag }} \
             --set secrets.mongoUser=${{ secrets.MONGO_USER }} \
             --set secrets.mongoPass=${{ secrets.MONGO_PASS }} \
             --set secrets.mongoHost=${{ secrets.MONGO_HOST }} \

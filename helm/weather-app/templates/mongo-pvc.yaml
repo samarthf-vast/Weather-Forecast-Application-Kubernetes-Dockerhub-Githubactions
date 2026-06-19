@@ -8,4 +8,4 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.mongo.storage }}
+      storage: {{ .Values.apps.mongo.storage }}

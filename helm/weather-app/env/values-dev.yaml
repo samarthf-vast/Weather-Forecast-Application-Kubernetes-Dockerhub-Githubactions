@@ -1,0 +1,12 @@
+ingress:
+  host: dev.weatherapp.com
+
+apps:
+  backend:
+    replicas: 1
+  frontend:
+    replicas: 1
+  nginx:
+    service:
+      type: NodePort
+      nodePort: 30927

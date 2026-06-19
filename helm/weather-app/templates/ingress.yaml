@@ -16,4 +16,4 @@ spec:
               service:
                 name: nginx
                 port:
-                  number: {{ .Values.nginx.port }}
+                  number: {{ .Values.apps.nginx.port }}
