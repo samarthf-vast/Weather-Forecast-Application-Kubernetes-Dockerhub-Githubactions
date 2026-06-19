@@ -220,22 +220,19 @@ jobs:
           if [ "${{ needs.build-backend.result }}" == "success" ]; then
             BACKEND_TAG="${{ env.VERSION }}"
           else
-            BACKEND_TAG=$(kubectl get deployment backend -n ${{ env.NAMESPACE }} \
-              -o jsonpath='{.spec.template.spec.containers[0].image}' \
-              2>/dev/null | cut -d: -f2)
+            BACKEND_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${{ env.BACKEND_IMAGE }}/tags?page_size=10&ordering=last_updated" \
+              | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
           fi
 
           if [ "${{ needs.build-frontend.result }}" == "success" ]; then
             FRONTEND_TAG="${{ env.VERSION }}"
           else
-            FRONTEND_TAG=$(kubectl get deployment frontend -n ${{ env.NAMESPACE }} \
-              -o jsonpath='{.spec.template.spec.containers[0].image}' \
-              2>/dev/null | cut -d: -f2)
+            FRONTEND_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${{ env.FRONTEND_IMAGE }}/tags?page_size=10&ordering=last_updated" \
+              | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
           fi
 
           if [ -z "$BACKEND_TAG" ] || [ -z "$FRONTEND_TAG" ]; then
-            echo "ERROR: Image tags are empty. No prior deployment found and no new build ran."
-            echo "Trigger a backend/frontend change to build new images first."
+            echo "ERROR: Could not determine image tags from DockerHub."
             exit 1
           fi
 
