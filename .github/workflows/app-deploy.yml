@@ -221,14 +221,14 @@ jobs:
             BACKEND_TAG="${{ env.VERSION }}"
           else
             BACKEND_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${{ env.BACKEND_IMAGE }}/tags?page_size=10&ordering=last_updated" \
-              | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
+              | grep -o '"name":"[^"]*"' | grep -v '"name":"latest"' | head -1 | cut -d'"' -f4)
           fi
 
           if [ "${{ needs.build-frontend.result }}" == "success" ]; then
             FRONTEND_TAG="${{ env.VERSION }}"
           else
             FRONTEND_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${{ env.FRONTEND_IMAGE }}/tags?page_size=10&ordering=last_updated" \
-              | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
+              | grep -o '"name":"[^"]*"' | grep -v '"name":"latest"' | head -1 | cut -d'"' -f4)
           fi
 
           if [ -z "$BACKEND_TAG" ] || [ -z "$FRONTEND_TAG" ]; then
