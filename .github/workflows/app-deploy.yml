@@ -233,6 +233,12 @@ jobs:
               2>/dev/null | cut -d: -f2)
           fi
 
+          if [ -z "$BACKEND_TAG" ] || [ -z "$FRONTEND_TAG" ]; then
+            echo "ERROR: Image tags are empty. No prior deployment found and no new build ran."
+            echo "Trigger a backend/frontend change to build new images first."
+            exit 1
+          fi
+
           echo "backend_tag=${BACKEND_TAG}" >> $GITHUB_OUTPUT
           echo "frontend_tag=${FRONTEND_TAG}" >> $GITHUB_OUTPUT
 
