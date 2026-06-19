@@ -1,0 +1,12 @@
+backend:
+  replicas: 1
+  image:
+    tag: v51
+
+frontend:
+  replicas: 1
+  image:
+    tag: v52
+
+ingress:
+  host: dev.weatherapp.com

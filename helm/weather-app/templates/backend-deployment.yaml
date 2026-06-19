@@ -1,8 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
-  namespace: {{ .Values.namespace }}
+  name: {{ include "weather-app.fullname" . }}-backend
+  labels:
+    {{- include "weather-app.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.backend.replicas }}
   selector:
@@ -49,7 +51,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: MONGO_AUTH_DB
+                  key: MONGO_AUTH_DB   
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
           livenessProbe:

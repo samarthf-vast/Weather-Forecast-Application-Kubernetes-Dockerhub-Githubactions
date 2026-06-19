@@ -1,8 +1,10 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: mongo
-  namespace: {{ .Values.namespace }}
+  name: {{ include "weather-app.fullname" . }}-mongo
+  labels:
+    {{- include "weather-app.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
 spec:
   serviceName: "mongo"
   replicas: {{ .Values.mongo.replicas }}

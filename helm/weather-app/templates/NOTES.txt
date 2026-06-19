@@ -1,0 +1,10 @@
+Weather App deployed successfully!
+
+Access the application:
+  http://{{ .Values.ingress.host }}
+
+Check pods:
+  kubectl get pods -n {{ .Release.Namespace }}
+
+Check release:
+  helm list -n {{ .Release.Namespace }}

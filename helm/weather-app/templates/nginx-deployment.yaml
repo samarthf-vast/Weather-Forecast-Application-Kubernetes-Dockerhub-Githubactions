@@ -1,8 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx
-  namespace: {{ .Values.namespace }}
+  name: {{ include "weather-app.fullname" . }}-nginx
+  labels:
+    {{- include "weather-app.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.nginx.replicas }}
   selector:
