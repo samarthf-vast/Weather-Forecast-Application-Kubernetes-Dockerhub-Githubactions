@@ -13,7 +13,7 @@ env:
 
 jobs:
 
-  # JOB 1: Detect which files changed
+  # JOB 1: Detect which files changed.
 
   detect-changes:
     name: Detect Changes
