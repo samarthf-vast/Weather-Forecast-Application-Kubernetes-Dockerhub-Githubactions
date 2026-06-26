@@ -3,22 +3,24 @@
 apiVersion: apps/v1
 kind: {{ $app.kind }}
 metadata:
-  name: {{ include "weather-app.fullname" $ }}-{{ $name }}
+  name: {{ include "chart.fullname" $ }}-{{ $name }}
   labels:
-    {{- include "weather-app.labels" $ | nindent 4 }}
+    {{- include "chart.labels" $ | nindent 4 }}
   namespace: {{ $.Release.Namespace }}
 spec:
   {{- if eq $app.kind "StatefulSet" }}
   serviceName: {{ $name | quote }}
   {{- end }}
-  replicas: {{ $app.replicas }}
+  replicas: {{ $app.replicas | default $.Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ $name }}
+      {{- include "chart.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
   template:
     metadata:
       labels:
-        app: {{ $name }}
+        {{- include "chart.selectorLabels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
     spec:
       containers:
         - name: {{ $name }}

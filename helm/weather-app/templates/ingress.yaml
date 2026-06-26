@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "weather-app.fullname" . }}-ingress
+  name: {{ include "chart.fullname" . }}-ingress
   labels:
-    {{- include "weather-app.labels" . | nindent 4 }}
+    {{- include "chart.labels" . | nindent 4 }}
   namespace: {{ .Release.Namespace }}
   {{- with .Values.ingress.annotations }}
   annotations:
@@ -14,10 +14,12 @@ spec:
   {{- with .Values.ingress.className }}
   ingressClassName: {{ . }}
   {{- end }}
+
   {{- if .Values.ingress.tls }}
   tls:
     {{- toYaml .Values.ingress.tls | nindent 4 }}
   {{- end }}
+  
   rules:
     - host: {{ .Values.ingress.host | quote }}
       http:
@@ -26,7 +28,7 @@ spec:
             pathType: {{ .Values.ingress.pathType }}
             backend:
               service:
-                name: nginx
+                name: {{ .Values.ingress.serviceName }}
                 port:
-                  number: {{ .Values.apps.nginx.port }}
+                  number: {{ .Values.ingress.servicePort }}
 {{- end }}

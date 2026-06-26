@@ -1,11 +1,13 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mongo-pvc
+  name: {{ .Values.apps.mongo.pvc.name }}
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
 spec:
   accessModes:
-    - ReadWriteOnce
+    {{- toYaml .Values.apps.mongo.pvc.accessModes | nindent 4 }}
   resources:
     requests:
-      storage: {{ .Values.apps.mongo.storage }}
+      storage: {{ .Values.apps.mongo.pvc.storage }}

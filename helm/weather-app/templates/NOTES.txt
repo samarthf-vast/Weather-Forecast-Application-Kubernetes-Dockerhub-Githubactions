@@ -1,10 +1,92 @@
-Weather App deployed successfully.!
+{{- $relName := .Release.Name }}
+{{- $ns     := .Release.Namespace }}
+{{- $svc    := .Values.deployedService | default "" }}
 
-Access the application:
-  http://{{ .Values.ingress.host }}
+{{- if $svc }}
+  {{- $app := index .Values.apps $svc }}
+  {{- if $app }}
 
-Check pods:
-  kubectl get pods -n {{ .Release.Namespace }}
+{{ upper $svc }} deployed successfully!
 
-Check release:
-  helm list -n {{ .Release.Namespace }}
+------------------------------------------------------------------------
+
+  Check pods:
+    kubectl get pods -n {{ $ns }} -l app={{ $svc }}
+  
+  View logs:
+    kubectl logs -n {{ $ns }} -l app={{ $svc }} --tail=50
+
+  {{- if eq $app.kind "StatefulSet" }}
+
+  Describe StatefulSet:
+    kubectl describe statefulset {{ $relName }}-{{ $svc }} -n {{ $ns }}
+
+  Restart StatefulSet:
+    kubectl rollout restart statefulset/{{ $relName }}-{{ $svc }} -n {{ $ns }}
+
+  Connect to {{ $svc }} shell:
+    kubectl exec -it {{ $relName }}-{{ $svc }}-0 -n {{ $ns }} -- {{ $app.shellCommand }}
+
+  {{- else }}
+
+  Describe Deployment:
+    kubectl describe deployment {{ $relName }}-{{ $svc }} -n {{ $ns }}
+
+  Restart Deployment:
+    kubectl rollout restart deployment/{{ $relName }}-{{ $svc }} -n {{ $ns }}
+
+  {{- end }}
+
+  {{- if and (eq $app.service.type "NodePort") $app.service.nodePort }}
+
+  Service (NodePort {{ $app.service.nodePort }}):
+    kubectl get svc {{ $relName }}-{{ $svc }} -n {{ $ns }}
+
+  Access URL:
+    http://<NODE_IP>:{{ $app.service.nodePort }}
+
+  {{- end }}
+
+  {{- if and .Values.ingress.enabled $app.showIngressNote }}
+
+  Ingress:
+    http://{{ .Values.ingress.host }}
+
+  {{- end }}
+
+  Check release:
+    helm list -n {{ $ns }}
+
+  {{- else }}
+
+WARNING: '{{ $svc }}' is not a recognized service. Available: {{ keys .Values.apps | sortAlpha | join ", " }}
+
+  {{- end }}
+
+{{- else }}
+
+{{ include "chart.fullname" . | upper }} deployed successfully!
+
+------------------------------------------------------------------------
+
+  Access the application:
+    http://{{ .Values.ingress.host }}
+
+  Services deployed:
+  {{- range $name, $app := .Values.apps }}
+    - {{ $name | printf "%-10s" }} ({{ $app.kind }})
+  {{- end }}
+
+  Check all pods:
+    kubectl get pods -n {{ $ns }}
+
+  Check all services:
+    kubectl get svc -n {{ $ns }}
+
+  Check release:
+    helm list -n {{ $ns }}
+
+  Tip: to see service-specific notes on next upgrade, pass:
+    --set deployedService=<{{ keys .Values.apps | sortAlpha | join "|" }}>
+
+{{- end }}

@@ -1,35 +1,140 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global default replica count applied to all apps unless overridden per-app in an env/values file.
+# To scale a specific app only, set apps.<name>.replicas in env/values-<branch>.yaml.
+# More information: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 1
+
+# This is to override the chart name. If set, it replaces the chart name used in labels.
+# More information: https://helm.sh/docs/chart_template_guide/builtin_objects/
+nameOverride: ""
+
+# This fully overrides the release name used in resource naming (e.g. metadata.name).
+# If not set, the release name from `helm install <release-name>` is used.
+fullnameOverride: ""
+
+# Optional: pass --set deployedService=<name> during helm upgrade to print service-specific
+# kubectl commands in NOTES.txt (e.g. --set deployedService=backend).
+# Leave empty to print the full deployment summary instead.
+deployedService: ""
+
+# This block configures the Ingress resource for external HTTP access to the app.
+# More information: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
+  # Set to false to disable Ingress creation entirely (e.g. for local dev without an ingress controller).
   enabled: true
+
+  # The IngressClass to use. "nginx" means the nginx ingress controller will handle this rule.
+  # More information: https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class
   className: "nginx"
+
+  # Annotations pass extra configuration to the ingress controller.
+  # rewrite-target: / strips the path prefix before forwarding to the backend service.
+  # More information: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+
+  # The hostname that the ingress rule matches against (e.g. weatherapp.com).
+  # Add this to your /etc/hosts or DNS for local Minikube: <minikube-ip> weatherapp.com
   host: weatherapp.com
+
+  # The URL path that this ingress rule applies to.
   path: /
+
+  # Determines how the path is matched. "Prefix" matches any path starting with the value above.
+  # Options: Prefix | Exact | ImplementationSpecific
+  # More information: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types
   pathType: Prefix
+
+  # The name of the Kubernetes Service that the Ingress routes traffic to.
+  # This must match a key in the apps map below (nginx acts as the reverse proxy entry point).
+  serviceName: nginx
+
+  # The port on the Service that the Ingress forwards traffic to.
+  # Defined here so ingress.yaml does not need to reach into apps.nginx.port directly.
+  servicePort: 80
+
+  # TLS configuration for HTTPS. Set to a list to enable TLS termination at the ingress.
+  # Example:
+  #   tls:
+  #     - secretName: weatherapp-tls
+  #       hosts:
+  #         - weatherapp.com
+  # More information: https://kubernetes.io/docs/concepts/services-networking/ingress/#tls
   tls: []
 
+# MongoDB connection secrets. These values are injected into a Kubernetes Secret (app-secrets)
+# and consumed by the backend as environment variables.
+# All fields are REQUIRED at deploy time — they must be passed via --set or a values file.
+# More information: https://kubernetes.io/docs/concepts/configuration/secret/
 secrets:
+  # MongoDB root username (e.g. admin)
   mongoUser: ""
+  # MongoDB root password
   mongoPass: ""
+  # MongoDB hostname — for in-cluster use this is the service name (e.g. mongo)
   mongoHost: ""
+  # MongoDB port (default: 27017)
   mongoPort: ""
+  # Name of the database the application connects to
   mongoDB: ""
+  # The database used for authentication (usually "admin")
   mongoAuthDB: ""
 
+# The apps map defines all workloads in the chart. Each key becomes the resource name
+# (Deployment/StatefulSet and Service). The templates loop over this map dynamically,
+# so adding a new key here will automatically create a new Deployment and Service.
+#
+# Supported kinds per app: Deployment | StatefulSet
+# More information: https://kubernetes.io/docs/concepts/workloads/controllers/
 apps:
+
+  # -----------------------------------------------------------------------
+  # Backend — Node.js REST API server that fetches weather data
+  # -----------------------------------------------------------------------
   backend:
+
+    # If true, NOTES.txt will print the ingress URL hint for this service.
+    showIngressNote: true
+
+    # Kubernetes workload kind. Use Deployment for stateless apps, StatefulSet for stateful (e.g. databases).
+    # More information: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
     kind: Deployment
+
+    # Container image configuration.
+    # More information: https://kubernetes.io/docs/concepts/containers/images/
     image:
+      # DockerHub image repository (format: <username>/<image-name> or <image-name> for official images).
       repository: samarthfunde45/weather-backend
+      # Image tag to deploy. Overridden at deploy time by the CI pipeline via --set.
+      # Leave empty here so the pipeline always controls the deployed version.
       tag: ""
+      # When to pull the image. IfNotPresent avoids unnecessary pulls if the tag already exists locally.
+      # Options: Always | IfNotPresent | Never
       pullPolicy: IfNotPresent
-    replicas: 1
+
+    # The container port the app listens on. Used in containerPort and Service targetPort.
     port: 5000
+
+    # Kubernetes Service configuration for this app.
+    # More information: https://kubernetes.io/docs/concepts/services-networking/service/
     service:
+      # ClusterIP makes the service reachable only within the cluster (internal traffic only).
+      # Options: ClusterIP | NodePort | LoadBalancer
       type: ClusterIP
+
+    # Load all keys from a Secret as environment variables into the container.
+    # app-secrets is the Secret created by templates/secrets.yaml.
+    # More information: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#configure-all-key-value-pairs-in-a-configmap-as-container-environment-variables
     envFrom:
       - secretRef:
           name: app-secrets
+
+    # Resource requests and limits for the container.
+    # requests: minimum resources guaranteed to the pod.
+    # limits: maximum resources the pod can consume before being throttled/OOMKilled.
+    # More information: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
     resources:
       requests:
         memory: "256Mi"
@@ -37,13 +142,23 @@ apps:
       limits:
         memory: "512Mi"
         cpu: "500m"
+
+    # Liveness probe: Kubernetes restarts the container if this check fails.
+    # Use for detecting deadlocks or unrecoverable errors.
+    # More information: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
     livenessProbe:
       httpGet:
         path: /metrics
         port: 5000
+      # Wait this many seconds after container start before the first check.
       initialDelaySeconds: 20
+      # How often to run the check (seconds).
       periodSeconds: 15
+      # Number of consecutive failures before the pod is restarted.
       failureThreshold: 3
+
+    # Readiness probe: Kubernetes stops sending traffic to the pod if this check fails.
+    # Use for detecting when the app is not yet ready to serve requests (e.g. still warming up).
     readinessProbe:
       httpGet:
         path: /metrics
@@ -52,16 +167,32 @@ apps:
       periodSeconds: 10
       failureThreshold: 3
 
+  # -----------------------------------------------------------------------
+  # Frontend — React SPA served by a Node.js or static server
+  # -----------------------------------------------------------------------
   frontend:
+    
+    # If true, NOTES.txt will print the ingress URL hint for this service.
+    showIngressNote: true
+
+    # Stateless app — Deployment is the correct kind here.
     kind: Deployment
+
     image:
       repository: samarthfunde45/weather-frontend
+      # Tag is overridden at deploy time by the CI pipeline via --set apps.frontend.image.tag.
       tag: ""
       pullPolicy: IfNotPresent
-    replicas: 1
+
+    # The container port the frontend server listens on.
     port: 80
+
+    # ClusterIP — frontend is not exposed directly. Traffic reaches it via nginx reverse proxy.
     service:
       type: ClusterIP
+
+    # Frontend gets more memory than backend because React build artifacts and Node.js
+    # runtime together consume more RAM.
     resources:
       requests:
         memory: "512Mi"
@@ -69,6 +200,9 @@ apps:
       limits:
         memory: "1Gi"
         cpu: "500m"
+
+    # Liveness probe: checks the root path returns a response. If it fails, pod is restarted.
+    # More information: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
     livenessProbe:
       httpGet:
         path: /
@@ -76,6 +210,8 @@ apps:
       initialDelaySeconds: 10
       periodSeconds: 15
       failureThreshold: 3
+
+    # Readiness probe: pod only receives traffic once / responds successfully.
     readinessProbe:
       httpGet:
         path: /
@@ -84,17 +220,31 @@ apps:
       periodSeconds: 10
       failureThreshold: 3
 
+  # -----------------------------------------------------------------------
+  # Nginx — Reverse proxy and entry point for all external traffic.
+  # Routes /weather/ to backend and / to frontend.
+  # Its configuration is defined in templates/nginx-config.yaml (ConfigMap).
+  # -----------------------------------------------------------------------
   nginx:
+    shellCommand: ""
+    showIngressNote: false
     kind: Deployment
     image:
       repository: nginx
+      # Pinned to a specific alpine tag for a smaller, reproducible image.
       tag: "1.29.8-alpine"
       pullPolicy: IfNotPresent
-    replicas: 1
     port: 80
     service:
+      # NodePort exposes the service on a static port on every node's IP.
+      # Used for direct browser access in Minikube: http://<minikube-ip>:<nodePort>
+      # More information: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
       type: NodePort
+      # The port exposed on the node. Must be in range 30000-32767 and unique per environment.
+      # master=30926, dev=30927, qa=30928 (overridden in env/values-*.yaml)
       nodePort: 30926
+
+    # Nginx is a lightweight proxy — very low resource usage compared to backend/frontend.
     resources:
       requests:
         memory: "64Mi"
@@ -102,52 +252,113 @@ apps:
       limits:
         memory: "128Mi"
         cpu: "200m"
+
+    # Liveness probe: restarts the pod if nginx stops responding.
+    # /healthz is a custom endpoint defined in nginx-config.yaml that returns 200 ok instantly.
+    # More information: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
     livenessProbe:
       httpGet:
         path: /healthz
         port: 80
       initialDelaySeconds: 10
+      # How often to check (seconds).
       periodSeconds: 15
+      # Restart the pod after 3 consecutive failures.
       failureThreshold: 3
+
+    # Readiness probe: removes pod from service endpoints until nginx is ready to accept traffic.
     readinessProbe:
       httpGet:
         path: /healthz
         port: 80
+      # Shorter delay than liveness — nginx starts faster than backend/frontend.
       initialDelaySeconds: 5
       periodSeconds: 10
       failureThreshold: 3
+
+    # Mounts the nginx.conf from the nginx-config ConfigMap into the container.
+    # More information: https://kubernetes.io/docs/concepts/storage/volumes/#configmap
     volumeMounts:
       - name: nginx-config
         mountPath: /etc/nginx/conf.d/default.conf
+        # subPath mounts only this specific key from the ConfigMap as a file (not the whole directory).
         subPath: nginx.conf
+
+    # Defines the volume source. The ConfigMap name must match the one in nginx-config.yaml.
     volumes:
       - name: nginx-config
         configMap:
           name: nginx-config
 
+  # -----------------------------------------------------------------------
+  # Mongo — MongoDB database deployed as a StatefulSet for stable storage.
+  # Uses a PersistentVolumeClaim to retain data across pod restarts.
+  # More information: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/
+  # -----------------------------------------------------------------------
   mongo:
+    # mongosh is the MongoDB shell — used in NOTES.txt exec example.
+    shellCommand: "mongosh"
+    showIngressNote: false
+
+    # StatefulSet is used instead of Deployment because MongoDB requires:
+    #   1. A stable network identity (headless service with clusterIP: None)
+    #   2. Persistent storage that survives pod rescheduling
     kind: StatefulSet
+
     image:
       repository: mongo
+      # Pinned to a specific version for reproducibility. Avoid using "latest" in production.
       tag: "8.2.7"
       pullPolicy: IfNotPresent
-    replicas: 1
+    # WARNING: Do not scale MongoDB beyond 1 replica without configuring a proper Replica Set.
+    # Scaling to >1 without Replica Set config causes split-brain data corruption.
+    # Uses global replicaCount (default 1) — do not override apps.mongo.replicas in env files.
+
+    # MongoDB default port.
     port: 27017
-    storage: "500Mi"
+
+    # PersistentVolumeClaim settings for MongoDB data directory (/data/db).
+    # The PVC is defined in templates/mongo-pvc.yaml.
+    # More information: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+    pvc:
+      # Name of the PVC resource created in Kubernetes.
+      name: mongo-pvc
+      # Storage size requested. Adjust based on expected data volume.
+      storage: "500Mi"
+      # Access mode defines how the volume can be mounted.
+      # ReadWriteOnce: mounted as read-write by a single node (standard for single-replica databases).
+      # More information: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+      accessModes:
+        - ReadWriteOnce
+
     service:
       type: ClusterIP
+      # clusterIP: None creates a Headless Service — required for StatefulSets.
+      # A headless service does not assign a virtual IP; DNS resolves directly to pod IPs.
+      # This gives MongoDB a stable DNS name: mongo.<namespace>.svc.cluster.local
+      # More information: https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
       clusterIP: None
+
+    # Individual environment variables injected into the container.
+    # Used here to set MongoDB root credentials from the app-secrets Secret.
+    # MONGO_INITDB_* are special MongoDB env vars that initialise the root user on first startup.
+    # More information: https://hub.docker.com/_/mongo (Environment Variables section)
     env:
+      # MONGO_INITDB_ROOT_USERNAME: MongoDB reads this on first startup to create the root user.
+      # valueFrom.secretKeyRef pulls the value from the app-secrets Secret (not hardcoded here).
       - name: MONGO_INITDB_ROOT_USERNAME
         valueFrom:
           secretKeyRef:
-            name: app-secrets
-            key: MONGO_USER
+            name: app-secrets  # Secret created by templates/secrets.yaml
+            key: MONGO_USER    # Key inside the Secret that holds the username
+      # MONGO_INITDB_ROOT_PASSWORD: root password, also read on first startup only.
       - name: MONGO_INITDB_ROOT_PASSWORD
         valueFrom:
           secretKeyRef:
             name: app-secrets
-            key: MONGO_PASS
+            key: MONGO_PASS    # Key inside the Secret that holds the password
+
+    # MongoDB needs more memory than nginx but similar to backend — it caches data in RAM.
     resources:
       requests:
         memory: "256Mi"
@@ -155,6 +366,10 @@ apps:
       limits:
         memory: "512Mi"
         cpu: "500m"
+
+    # exec probe runs a command inside the container instead of making an HTTP request.
+    # mongosh --eval "db.adminCommand('ping')" verifies MongoDB is accepting connections.
+    # --quiet suppresses verbose output so only the result is returned.
     livenessProbe:
       exec:
         command:
@@ -162,8 +377,10 @@ apps:
           - --eval
           - "db.adminCommand('ping')"
           - --quiet
+      # MongoDB takes longer to start than HTTP apps — higher initialDelaySeconds avoids false restarts.
       initialDelaySeconds: 30
       periodSeconds: 15
+      # timeoutSeconds: how long to wait for the probe command to complete before counting as a failure.
       timeoutSeconds: 10
       failureThreshold: 3
     readinessProbe:
@@ -177,9 +394,14 @@ apps:
       periodSeconds: 10
       timeoutSeconds: 10
       failureThreshold: 3
+
+    # Mounts the PVC into the container at MongoDB's default data directory.
+    # The volume name must match the entry in volumes below.
     volumeMounts:
       - name: mongo-storage
         mountPath: /data/db
+
+    # Binds the named volume to the PVC defined under pvc.name above.
     volumes:
       - name: mongo-storage
         persistentVolumeClaim:

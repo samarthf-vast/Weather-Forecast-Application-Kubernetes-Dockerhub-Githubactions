@@ -5,9 +5,12 @@ kind: Service
 metadata:
   name: {{ $name }}
   namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "chart.labels" $ | nindent 4 }}
 spec:
   selector:
-    app: {{ $name }}
+    {{- include "chart.selectorLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
   ports:
     - port: {{ $app.port }}
       targetPort: {{ $app.port }}

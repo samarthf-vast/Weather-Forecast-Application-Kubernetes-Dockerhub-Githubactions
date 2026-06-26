@@ -1,13 +1,23 @@
+# Environment-specific overrides for the qa branch.
+# These values are merged on top of values.yaml during helm upgrade (via -f flag).
+# Only specify values that differ from the defaults in values.yaml.
+
+# Override the ingress hostname for QA environment.
+# Add to /etc/hosts: <minikube-ip> qa.weatherapp.com
 ingress:
   enabled: true
   host: qa.weatherapp.com
 
 apps:
+  # Scale backend and frontend to 2 replicas in QA for load testing.
+  # Overrides the global replicaCount from values.yaml.
   backend:
     replicas: 2
   frontend:
     replicas: 2
   nginx:
     service:
+      # Unique NodePort per environment to avoid conflicts on the same Minikube node.
+      # master=30926 | dev=30927 | qa=30928
       type: NodePort
       nodePort: 30928

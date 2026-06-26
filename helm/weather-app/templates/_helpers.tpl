@@ -1,24 +1,36 @@
 {{/*
-Chart Name
+Chart Name — trimmed to 63 chars (Kubernetes label limit)
 */}}
-{{- define "weather-app.name" -}}
-{{ .Chart.Name }}
+{{- define "chart.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
-Full Name
+Full Name — release name, trimmed to 63 chars
+Override with fullnameOverride in values.yaml
 */}}
-{{- define "weather-app.fullname" -}}
-{{ .Release.Name }}
+{{- define "chart.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- end }}
 {{- end }}
 
 {{/*
-Common Labels
+Selector Labels — used in matchLabels and pod labels
 */}}
-{{- define "weather-app.labels" -}}
-app.kubernetes.io/name: {{ include "weather-app.name" . }}
+{{- define "chart.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "chart.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Common Labels — full set for all resources
+*/}}
+{{- define "chart.labels" -}}
+{{- include "chart.selectorLabels" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
-app.kubernetes.io/version: {{ .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | trunc 63 | trimSuffix "-" }}
 {{- end }}
